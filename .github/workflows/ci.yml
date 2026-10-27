@@ -1,4 +1,13 @@
 name: CI
+run: pnpm build
+
+env:
+	DATABASE_URL: ${{ secrets.DATABASE_URL_PREVIEW }}
+	JWT_SECRET: ${{ secrets.JWT_SECRET }}
+			
+	SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+	SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+	SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
 
 on:
   pull_request:
