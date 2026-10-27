@@ -1,0 +1,1 @@
+ALTER TABLE "log_falha_login" ADD COLUMN "admin_id" uuid;

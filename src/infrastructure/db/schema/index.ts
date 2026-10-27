@@ -1,7 +1,7 @@
-import { pgTable, uuid, varchar, timestamp } from "drizzle-orm/pg-core";
+// src/infrastructure/db/schema/index.ts
+export * from "./administrador";
+export * from "./logs";
+export { healthCheck } from "./health-check";
 
-export const healthCheck = pgTable("health_check", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  status: varchar("status", { length: 50 }).notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+// Placeholder for future schemas
+export {};

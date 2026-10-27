@@ -1,0 +1,7 @@
+// src/infrastructure/db/schema/logs/index.ts
+export * from "./log-base";
+export * from "./log-login";
+export * from "./log-logout";
+export * from "./log-falha-login";
+export * from "./log-recuperacao-senha";
+export * from "./log-rate-limit";
