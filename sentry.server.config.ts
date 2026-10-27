@@ -1,22 +1,9 @@
-// This file configures the initialization of Sentry on the server.
-// The config you add here will be used whenever the server handles a request.
-// https://docs.sentry.io/platforms/javascript/guides/nextjs/
-
 import * as Sentry from "@sentry/nextjs";
 
 Sentry.init({
-  dsn: env.SENTRY_DSN,
-  sendDefaultPii: false,
-  beforeSend(event) {
-    // Scrub de campos sensíveis
-    if (event.request?.data) {
-      ['email', 'telefone', 'senha', 'password'].forEach((key) => {
-        if (event.request!.data![key]) {
-          event.request!.data![key] = '[REDACTED]';
-        }
-      });
-    }
-    return event;
+  dsn: process.env.SENTRY_DSN, // Sem NEXT_PUBLIC_ no servidor
+  dataCollection: {
+    // Configure conforme sua necessidade de privacidade
   },
   tracesSampleRate: 0.1, // 10% das transações
 });
