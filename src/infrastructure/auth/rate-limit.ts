@@ -1,6 +1,6 @@
-import { Ratelimit } from '@upstash/ratelimit';
-import { Redis } from '@upstash/redis';
-import { env } from '@/shared/env';
+import { Ratelimit } from "@upstash/ratelimit";
+import { Redis } from "@upstash/redis";
+import { env } from "@/shared/env";
 
 const redis = new Redis({
   url: env.UPSTASH_REDIS_URL,
@@ -9,14 +9,14 @@ const redis = new Redis({
 
 export const rateLimitLogin = new Ratelimit({
   redis,
-  limiter: Ratelimit.slidingWindow(10, '1 m'),
+  limiter: Ratelimit.slidingWindow(10, "1 m"),
   analytics: false,
-  prefix: 'ratelimit:login',
+  prefix: "ratelimit:login",
 });
 
 export const rateLimitSolicitacao = new Ratelimit({
   redis,
-  limiter: Ratelimit.slidingWindow(5, '1 h'),
+  limiter: Ratelimit.slidingWindow(5, "1 h"),
   analytics: false,
-  prefix: 'ratelimit:solicitacao',
+  prefix: "ratelimit:solicitacao",
 });

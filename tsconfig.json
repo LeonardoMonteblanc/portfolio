@@ -14,10 +14,9 @@
     "jsx": "react-jsx",
     "incremental": true,
     "noUncheckedIndexedAccess": true,
-    "noImplicitOverride":true,
-    "noFallthroughCasesInSwitch":true,
-    "forceConsistentCasingInFileNames":true,
-
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "forceConsistentCasingInFileNames": true,
 
     "plugins": [
       {
@@ -26,7 +25,7 @@
     ],
     "paths": {
       "@/*": ["./src/*"],
-      "@/components/*": ["./src/ui/components/*"],
+      "@/components/*": ["./src/ui/components/*"]
     }
   },
   "include": [
