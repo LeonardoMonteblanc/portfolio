@@ -1,7 +1,9 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 const envSchema = z.object({
-  NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+  NODE_ENV: z
+    .enum(["development", "test", "production"])
+    .default("development"),
   DATABASE_URL: z.string().url(),
   JWT_SECRET: z.string().min(32),
   RESEND_API_KEY: z.string().min(1),
