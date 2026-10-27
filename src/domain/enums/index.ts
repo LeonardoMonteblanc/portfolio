@@ -19,6 +19,12 @@ export type SituacaoSolicitacao =
 export type SituacaoPublicacao =
   "nao_elegivel" | "nao_publicado" | "publicado" | "oculto_contestacao";
 
+export type MotivoNaoElegivel =
+  | "aprovacao_ausente"
+  | "dados_incompletos"
+  | "categoria_removida"
+  | "contato_invalido";
+
 export type TipoContato =
   "whatsapp" | "telefone" | "instagram" | "email" | "outro";
 
