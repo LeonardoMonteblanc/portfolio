@@ -15,7 +15,7 @@ const envSchema = z.object({
   R2_PUBLIC_URL: z.string().url(),
   UPSTASH_REDIS_URL: z.string().url(),
   UPSTASH_REDIS_TOKEN: z.string().min(1),
-  SENTRY_DSN: z.string().url().optional(),
+  SENTRY_DSN: z.string().url().optional().or(z.literal("")),
   ADMIN_EMAIL_INSTITUCIONAL: z.string().email().optional(),
   ADMIN_EMAIL_DPO: z.string().email().optional(),
 });
