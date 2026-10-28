@@ -36,6 +36,13 @@
       "when": 1793200302617,
       "tag": "0004_familiar_ser_duncan",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1793218411840,
+      "tag": "0005_magical_starbolt",
+      "breakpoints": true
     }
   ]
 }
