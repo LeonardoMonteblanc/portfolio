@@ -1,8 +1,8 @@
 // src/app/(public)/solicitar/page.tsx
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/ui/components/button";
 import { Input } from "@/ui/components/input";
 import { Label } from "@/ui/components/label";
@@ -44,6 +44,27 @@ const DIAS_SEMANA = [
   { value: 5, label: "Sexta" },
   { value: 6, label: "Sábado" },
 ];
+
+function SuccessMessage() {
+  const searchParams = useSearchParams();
+  if (searchParams.get("sucesso") !== "1") return null;
+
+  return (
+    <div className="text-center py-12">
+      <CheckCircle className="h-16 w-16 text-green-600 mx-auto mb-4" />
+      <h2 className="text-2xl font-bold text-gray-900 mb-2">
+        Solicitação enviada!
+      </h2>
+      <p className="text-gray-600 mb-6">
+        Sua solicitação foi recebida e será analisada pela administração. Você
+        receberá atualizações por e-mail.
+      </p>
+      <Link href="/" className="inline-block text-blue-600 hover:underline">
+        Voltar ao início
+      </Link>
+    </div>
+  );
+}
 
 export default function SolicitarPage() {
   const router = useRouter();
@@ -810,24 +831,22 @@ export default function SolicitarPage() {
           </form>
         )}
 
-        {new URLSearchParams(window.location.search).get("sucesso") === "1" && (
-          <div className="text-center py-12">
-            <CheckCircle className="h-16 w-16 text-green-600 mx-auto mb-4" />
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">
-              Solicitação enviada!
-            </h2>
-            <p className="text-gray-600 mb-6">
-              Sua solicitação foi recebida e será analisada pela administração.
-              Você receberá atualizações por e-mail.
-            </p>
-            <Link
-              href="/"
-              className="inline-block text-blue-600 hover:underline"
-            >
-              Voltar ao início
-            </Link>
-          </div>
-        )}
+        <Suspense fallback={<div>Carregando...</div>}>
+          <SuccessMessage />
+        </Suspense>
+        <div className="text-center py-12">
+          <CheckCircle className="h-16 w-16 text-green-600 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">
+            Solicitação enviada!
+          </h2>
+          <p className="text-gray-600 mb-6">
+            Sua solicitação foi recebida e será analisada pela administração.
+            Você receberá atualizações por e-mail.
+          </p>
+          <Link href="/" className="inline-block text-blue-600 hover:underline">
+            Voltar ao início
+          </Link>
+        </div>
       </div>
     </div>
   );
