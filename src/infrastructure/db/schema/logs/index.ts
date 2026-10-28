@@ -5,3 +5,5 @@ export * from "./log-logout";
 export * from "./log-falha-login";
 export * from "./log-recuperacao-senha";
 export * from "./log-rate-limit";
+export * from "./log-categoria";
+export * from "./log-negocio";
