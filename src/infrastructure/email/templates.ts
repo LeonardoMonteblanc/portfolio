@@ -145,3 +145,54 @@ Diretório Comunitário de Bento Gonçalves
 
   return { html, text };
 }
+
+export function gerarEmailAnaliseSolicitacao(
+  nomeSolicitante: string,
+  nomeNegocio: string,
+  decisao: "aprovar" | "reprovar" | "solicitar_correcao",
+  justificativa?: string,
+): { html: string; text: string } {
+  const statusMap = {
+    aprovar: { label: "aprovada", cor: "#059669" },
+    reprovar: { label: "reprovada", cor: "#dc2626" },
+    solicitar_correcao: { label: "solicitada correção", cor: "#d97706" },
+  };
+  const { label, cor } = statusMap[decisao];
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Solicitação ${label} - Diretório Comunitário</title>
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="background: #f8f9fa; border-radius: 8px; padding: 30px;">
+    <h1 style="color: ${cor}; margin-bottom: 24px;">Sua solicitação foi ${label}</h1>
+    <p style="margin-bottom: 16px;">Olá <strong>${nomeSolicitante}</strong>,</p>
+    <p style="margin-bottom: 16px;">Sua solicitação para o negócio <strong>${nomeNegocio}</strong> foi <strong style="color: ${cor};">${label}</strong> pela administração.</p>
+    ${justificativa ? `<p style="margin-bottom: 16px; padding: 12px; background: #fff3cd; border-radius: 4px; border-left: 4px solid ${cor};"><strong>Justificativa:</strong> ${justificativa}</p>` : ""}
+    ${decisao === "aprovar" ? '<p style="margin-bottom: 16px;">O negócio já está publicado no diretório e visível ao público.</p>' : decisao === "solicitar_correcao" ? '<p style="margin-bottom: 16px;">Por favor, corrija as informações solicitadas e reenvie a solicitação.</p>' : ""}
+    <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 24px 0;">
+    <p style="font-size: 13px; color: #888;">Diretório Comunitário de Bento Gonçalves</p>
+  </div>
+</body>
+</html>
+  `.trim();
+
+  const text = `
+Sua solicitação foi ${label}
+
+Olá ${nomeSolicitante},
+
+Sua solicitação para o negócio "${nomeNegocio}" foi ${label} pela administração.
+${justificativa ? `Justificativa: ${justificativa}` : ""}
+
+${decisao === "aprovar" ? "O negócio já está publicado no diretório e visível ao público." : decisao === "solicitar_correcao" ? "Por favor, corrija as informações solicitadas e reenvie a solicitação." : ""}
+
+--
+Diretório Comunitário de Bento Gonçalves
+  `.trim();
+
+  return { html, text };
+}

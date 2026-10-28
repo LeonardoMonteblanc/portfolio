@@ -11,6 +11,8 @@ export const negocio = pgTable("negocio", {
     .default("nao_elegivel"),
   motivoNaoElegivel: varchar("motivo_nao_elegivel", { length: 30 }),
   aprovacaoVigenteId: uuid("aprovacao_vigente_id"),
+  fonte: varchar("fonte", { length: 30 }).default("manual"), // 'manual' | 'solicitacao_publica'
+  solicitacaoOrigemId: uuid("solicitacao_origem_id"),
   criadoEm: timestamp("criado_em", { withTimezone: true })
     .notNull()
     .defaultNow(),

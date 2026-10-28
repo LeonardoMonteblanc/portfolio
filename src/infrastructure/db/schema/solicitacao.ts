@@ -23,6 +23,8 @@ export const solicitacao = pgTable("solicitacao", {
   dadosNegocioProposto: jsonb("dados_negocio_proposto").notNull(),
   duplicataDetectada: boolean("duplicata_detectada").notNull().default(false),
   motivoIncompleta: text("motivo_incompleta"),
+  analisadaEm: timestamp("analisada_em", { withTimezone: true }),
+  observacoesInternas: text("observacoes_internas"),
   criadoEm: timestamp("criado_em", { withTimezone: true })
     .notNull()
     .defaultNow(),
