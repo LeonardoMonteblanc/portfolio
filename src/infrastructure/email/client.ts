@@ -85,3 +85,27 @@ export async function enviarEmailCorrecaoDados(
     text,
   });
 }
+
+export async function enviarEmailAnaliseSolicitacao(
+  email: string,
+  nomeSolicitante: string,
+  nomeNegocio: string,
+  decisao: "aprovar" | "reprovar" | "solicitar_correcao",
+  justificativa?: string,
+): Promise<void> {
+  const { html, text } = await import("@/infrastructure/email/templates").then(
+    (m) =>
+      m.gerarEmailAnaliseSolicitacao(
+        nomeSolicitante,
+        nomeNegocio,
+        decisao,
+        justificativa,
+      ),
+  );
+  await enviarEmail({
+    to: email,
+    subject: `Sua solicitação foi ${decisao === "aprovar" ? "aprovada" : decisao === "reprovar" ? "reprovada" : "solicitada correção"} - Diretório Comunitário`,
+    html,
+    text,
+  });
+}

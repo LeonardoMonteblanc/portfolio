@@ -11,3 +11,4 @@ export * from "./log-solicitacao-recebida";
 export * from "./log-vinculacao-solicitacao";
 export * from "./log-sugestao-categoria";
 export * from "./log-comunicacao";
+export * from "./log-solicitacao-analisada";
