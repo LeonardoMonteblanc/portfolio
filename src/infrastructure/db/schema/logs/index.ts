@@ -7,3 +7,5 @@ export * from "./log-recuperacao-senha";
 export * from "./log-rate-limit";
 export * from "./log-categoria";
 export * from "./log-negocio";
+export * from "./log-solicitacao-recebida";
+export * from "./log-vinculacao-solicitacao";
