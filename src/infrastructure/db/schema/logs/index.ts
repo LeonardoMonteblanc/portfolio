@@ -12,3 +12,7 @@ export * from "./log-vinculacao-solicitacao";
 export * from "./log-sugestao-categoria";
 export * from "./log-comunicacao";
 export * from "./log-solicitacao-analisada";
+export * from "./log-forum";
+export * from "./log-contestacao";
+export * from "./log-votacao";
+export * from "./log-suspensao-admin";
