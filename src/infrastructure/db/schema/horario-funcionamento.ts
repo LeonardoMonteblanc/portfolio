@@ -7,6 +7,7 @@ import {
   varchar,
   timestamp,
 } from "drizzle-orm/pg-core";
+import { relations } from "drizzle-orm";
 import { negocio } from "./negocio";
 
 export const horarioFuncionamento = pgTable("horario_funcionamento", {
@@ -19,6 +20,16 @@ export const horarioFuncionamento = pgTable("horario_funcionamento", {
   horaFechamento: time("hora_fechamento").notNull(),
   observacao: varchar("observacao", { length: 100 }),
 });
+
+export const horarioFuncionamentoRelations = relations(
+  horarioFuncionamento,
+  ({ one }) => ({
+    negocio: one(negocio, {
+      fields: [horarioFuncionamento.negocioId],
+      references: [negocio.id],
+    }),
+  }),
+);
 
 export type HorarioFuncionamento = typeof horarioFuncionamento.$inferSelect;
 export type NovoHorarioFuncionamento = typeof horarioFuncionamento.$inferInsert;

@@ -103,7 +103,7 @@ export async function buscarSolicitacaoPorIdAction(
     where: (s, { eq }) => eq(s.id, id),
     with: {
       solicitante: true,
-      sugestaoCategoria: true,
+      categoriasSugeridas: true,
     },
   });
 

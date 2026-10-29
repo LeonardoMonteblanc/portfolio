@@ -7,6 +7,10 @@ import {
   boolean,
   timestamp,
 } from "drizzle-orm/pg-core";
+import { relations } from "drizzle-orm";
+import { forumPublicacao } from "./forum-publicacao";
+import { contestacao } from "./contestacao";
+import { voto } from "./voto";
 
 export const administrador = pgTable("administrador", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -20,6 +24,12 @@ export const administrador = pgTable("administrador", {
     .defaultNow(),
   ultimaTrocaSenha: timestamp("ultima_troca_senha", { withTimezone: true }),
 });
+
+export const administradorRelations = relations(administrador, ({ many }) => ({
+  forumPublicacoes: many(forumPublicacao),
+  contestacoes: many(contestacao),
+  votos: many(voto),
+}));
 
 export type Administrador = typeof administrador.$inferSelect;
 export type NovoAdministrador = typeof administrador.$inferInsert;

@@ -1,5 +1,6 @@
 // src/infrastructure/db/schema/voto.ts
 import { pgTable, uuid, varchar, timestamp, unique } from "drizzle-orm/pg-core";
+import { relations } from "drizzle-orm";
 import { votacao } from "./votacao";
 import { administrador } from "./administrador";
 
@@ -22,6 +23,17 @@ export const voto = pgTable(
     uniqueVoto: unique("unique_voto").on(table.votacaoId, table.adminId),
   }),
 );
+
+export const votoRelations = relations(voto, ({ one }) => ({
+  votacao: one(votacao, {
+    fields: [voto.votacaoId],
+    references: [votacao.id],
+  }),
+  autor: one(administrador, {
+    fields: [voto.adminId],
+    references: [administrador.id],
+  }),
+}));
 
 export type Voto = typeof voto.$inferSelect;
 export type NovoVoto = typeof voto.$inferInsert;

@@ -7,8 +7,10 @@ import {
   timestamp,
   boolean,
 } from "drizzle-orm/pg-core";
+import { relations } from "drizzle-orm";
 import { administrador } from "./administrador";
 import { negocio } from "./negocio";
+import { contestacao } from "./contestacao";
 
 export const forumPublicacao = pgTable("forum_publicacao", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -30,6 +32,26 @@ export const forumPublicacao = pgTable("forum_publicacao", {
     .notNull()
     .defaultNow(),
 });
+
+export const forumPublicacaoRelations = relations(
+  forumPublicacao,
+  ({ one, many }) => ({
+    negocio: one(negocio, {
+      fields: [forumPublicacao.negocioId],
+      references: [negocio.id],
+    }),
+    autor: one(administrador, {
+      fields: [forumPublicacao.autorId],
+      references: [administrador.id],
+    }),
+    comentarioPai: one(forumPublicacao, {
+      fields: [forumPublicacao.comentarioPaiId],
+      references: [forumPublicacao.id],
+    }),
+    respostas: many(forumPublicacao),
+    contestacoes: many(contestacao),
+  }),
+);
 
 export type ForumPublicacao = typeof forumPublicacao.$inferSelect;
 export type NovaForumPublicacao = typeof forumPublicacao.$inferInsert;

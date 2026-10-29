@@ -8,7 +8,9 @@ import {
   integer,
   boolean,
 } from "drizzle-orm/pg-core";
+import { relations } from "drizzle-orm";
 import { contestacao } from "./contestacao";
+import { voto } from "./voto";
 
 export const votacao = pgTable("votacao", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -33,6 +35,14 @@ export const votacao = pgTable("votacao", {
   votosNao: integer("votos_nao").notNull().default(0),
   votosAbstencao: integer("votos_abstencao").notNull().default(0),
 });
+
+export const votacaoRelations = relations(votacao, ({ one, many }) => ({
+  contestacao: one(contestacao, {
+    fields: [votacao.contestacaoId],
+    references: [contestacao.id],
+  }),
+  votos: many(voto),
+}));
 
 export type Votacao = typeof votacao.$inferSelect;
 export type NovaVotacao = typeof votacao.$inferInsert;

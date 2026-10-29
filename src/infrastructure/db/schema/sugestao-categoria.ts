@@ -1,5 +1,6 @@
 // src/infrastructure/db/schema/sugestao-categoria.ts
 import { pgTable, uuid, varchar, text, timestamp } from "drizzle-orm/pg-core";
+import { relations } from "drizzle-orm";
 import { solicitacao } from "./solicitacao";
 import { categoria } from "./categoria";
 
@@ -18,6 +19,20 @@ export const sugestaoCategoria = pgTable("sugestao_categoria", {
     .defaultNow(),
   triadaEm: timestamp("triada_em", { withTimezone: true }),
 });
+
+export const sugestaoCategoriaRelations = relations(
+  sugestaoCategoria,
+  ({ one }) => ({
+    solicitacao: one(solicitacao, {
+      fields: [sugestaoCategoria.solicitacaoId],
+      references: [solicitacao.id],
+    }),
+    categoriaCriada: one(categoria, {
+      fields: [sugestaoCategoria.categoriaCriadaId],
+      references: [categoria.id],
+    }),
+  }),
+);
 
 export type SugestaoCategoria = typeof sugestaoCategoria.$inferSelect;
 export type NovaSugestaoCategoria = typeof sugestaoCategoria.$inferInsert;

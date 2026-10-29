@@ -7,7 +7,9 @@ import {
   timestamp,
   integer,
 } from "drizzle-orm/pg-core";
+import { relations } from "drizzle-orm";
 import { solicitacao } from "./solicitacao";
+import { imagem } from "./imagem";
 
 export const anexo = pgTable("anexo", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -23,6 +25,14 @@ export const anexo = pgTable("anexo", {
     .notNull()
     .defaultNow(),
 });
+
+export const anexoRelations = relations(anexo, ({ one, many }) => ({
+  solicitacao: one(solicitacao, {
+    fields: [anexo.solicitacaoId],
+    references: [solicitacao.id],
+  }),
+  imagens: many(imagem),
+}));
 
 export type Anexo = typeof anexo.$inferSelect;
 export type NovoAnexo = typeof anexo.$inferInsert;

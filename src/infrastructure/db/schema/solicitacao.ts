@@ -8,8 +8,12 @@ import {
   boolean,
   jsonb,
 } from "drizzle-orm/pg-core";
+import { relations } from "drizzle-orm";
 import { solicitante } from "./solicitante";
 import { negocio } from "./negocio";
+import { sugestaoCategoria } from "./sugestao-categoria";
+import { imagem } from "./imagem";
+import { anexo } from "./anexo";
 
 export const solicitacao = pgTable("solicitacao", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -33,6 +37,20 @@ export const solicitacao = pgTable("solicitacao", {
     .notNull()
     .defaultNow(),
 });
+
+export const solicitacaoRelations = relations(solicitacao, ({ one, many }) => ({
+  solicitante: one(solicitante, {
+    fields: [solicitacao.solicitanteId],
+    references: [solicitante.id],
+  }),
+  negocio: one(negocio, {
+    fields: [solicitacao.negocioId],
+    references: [negocio.id],
+  }),
+  categoriasSugeridas: many(sugestaoCategoria),
+  imagens: many(imagem),
+  anexos: many(anexo),
+}));
 
 export type Solicitacao = typeof solicitacao.$inferSelect;
 export type NovaSolicitacao = typeof solicitacao.$inferInsert;

@@ -7,6 +7,7 @@ import {
   boolean,
   timestamp,
 } from "drizzle-orm/pg-core";
+import { relations } from "drizzle-orm";
 import { negocio } from "./negocio";
 
 export const contato = pgTable("contato", {
@@ -22,6 +23,13 @@ export const contato = pgTable("contato", {
     .notNull()
     .defaultNow(),
 });
+
+export const contatoRelations = relations(contato, ({ one }) => ({
+  negocio: one(negocio, {
+    fields: [contato.negocioId],
+    references: [negocio.id],
+  }),
+}));
 
 export type Contato = typeof contato.$inferSelect;
 export type NovoContato = typeof contato.$inferInsert;

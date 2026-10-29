@@ -1,5 +1,7 @@
 // src/infrastructure/db/schema/solicitante.ts
 import { pgTable, uuid, varchar, timestamp } from "drizzle-orm/pg-core";
+import { relations } from "drizzle-orm";
+import { solicitacao } from "./solicitacao";
 
 export const solicitante = pgTable("solicitante", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -11,6 +13,10 @@ export const solicitante = pgTable("solicitante", {
     .defaultNow(),
   anonimizadoEm: timestamp("anonimizado_em", { withTimezone: true }),
 });
+
+export const solicitanteRelations = relations(solicitante, ({ many }) => ({
+  solicitacoes: many(solicitacao),
+}));
 
 export type Solicitante = typeof solicitante.$inferSelect;
 export type NovoSolicitante = typeof solicitante.$inferInsert;

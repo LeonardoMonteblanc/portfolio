@@ -55,7 +55,7 @@ export async function analisarSolicitacaoAction(
     where: (s, { eq }) => eq(s.id, solicitacaoId),
     with: {
       solicitante: true,
-      sugestaoCategoria: true,
+      categoriasSugeridas: true,
     },
   })) as any;
 

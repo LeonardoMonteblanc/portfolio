@@ -334,23 +334,23 @@ export async function registrarVotoAction(
   const { votacaoId, escolha } = parseResult.data;
 
   const votacaoQuery = {
-    // @ts-ignore
-    // @ts-ignore
+    // @ts-ignore - complex query type inference
     where: (v, { eq }) => eq(v.id, votacaoId),
     with: {
       contestacao: {
         with: {
           autor: { columns: { id: true, nome: true } },
-          negocio: true,
-          solicitacaoOrigem: true,
+          negocio: { columns: { id: true, nome: true, slug: true } },
+          solicitacaoOrigem: {
+            columns: { id: true, situacao: true, tipo: true },
+          },
         },
       },
       votos: {
         with: {
-          admin: { columns: { id: true, nome: true } },
+          autor: { columns: { id: true, nome: true } },
         },
-        // @ts-ignore
-        // @ts-ignore
+        // @ts-ignore - complex query type inference
         orderBy: (v, { asc }) => [asc(v.criadoEm)],
       },
     },
@@ -486,23 +486,23 @@ export async function apurarVotacaoAction(
   const { votacaoId } = parseResult.data;
 
   const votacaoQuery = {
-    // @ts-ignore
-    // @ts-ignore
+    // @ts-ignore - complex query type inference
     where: (v, { eq }) => eq(v.id, votacaoId),
     with: {
       contestacao: {
         with: {
           autor: { columns: { id: true, nome: true } },
-          negocio: true,
-          solicitacaoOrigem: true,
+          negocio: { columns: { id: true, nome: true, slug: true } },
+          solicitacaoOrigem: {
+            columns: { id: true, situacao: true, tipo: true },
+          },
         },
       },
       votos: {
         with: {
-          admin: { columns: { id: true, nome: true } },
+          autor: { columns: { id: true, nome: true } },
         },
-        // @ts-ignore
-        // @ts-ignore
+        // @ts-ignore - complex query type inference
         orderBy: (v, { asc }) => [asc(v.criadoEm)],
       },
     },
@@ -725,23 +725,23 @@ export async function detalharVotacaoAction(
   const { votacaoId } = parseResult.data;
 
   const votacaoQuery = {
-    // @ts-ignore
-    // @ts-ignore
+    // @ts-ignore - complex query type inference
     where: (v, { eq }) => eq(v.id, votacaoId),
     with: {
       contestacao: {
         with: {
           autor: { columns: { id: true, nome: true } },
-          negocio: true,
-          solicitacaoOrigem: true,
+          negocio: { columns: { id: true, nome: true, slug: true } },
+          solicitacaoOrigem: {
+            columns: { id: true, situacao: true, tipo: true },
+          },
         },
       },
       votos: {
         with: {
-          admin: { columns: { id: true, nome: true } },
+          autor: { columns: { id: true, nome: true } },
         },
-        // @ts-ignore
-        // @ts-ignore
+        // @ts-ignore - complex query type inference
         orderBy: (v, { asc }) => [asc(v.criadoEm)],
       },
     },

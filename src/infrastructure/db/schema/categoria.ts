@@ -7,6 +7,9 @@ import {
   boolean,
   timestamp,
 } from "drizzle-orm/pg-core";
+import { relations } from "drizzle-orm";
+import { negocioCategoria } from "./negocio-categoria";
+import { sugestaoCategoria } from "./sugestao-categoria";
 
 export const categoria = pgTable("categoria", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -18,6 +21,11 @@ export const categoria = pgTable("categoria", {
     .notNull()
     .defaultNow(),
 });
+
+export const categoriaRelations = relations(categoria, ({ many }) => ({
+  negocios: many(negocioCategoria),
+  sugestoesCriadas: many(sugestaoCategoria),
+}));
 
 export type Categoria = typeof categoria.$inferSelect;
 export type NovaCategoria = typeof categoria.$inferInsert;

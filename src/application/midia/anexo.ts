@@ -65,7 +65,7 @@ export async function enviarAnexoAction(
 
   const sol = await db.query.solicitacao.findFirst({
     where: (s, { eq }) => eq(s.id, solicitacaoId),
-    with: { negocio: true },
+    with: { negocio: { columns: { id: true, nome: true, slug: true } } },
   });
 
   if (!sol) {
@@ -170,7 +170,11 @@ export async function atualizarSituacaoAnexoAction(
 
   const an = await db.query.anexo.findFirst({
     where: (a, { eq }) => eq(a.id, anexoId),
-    with: { solicitacao: { with: { negocio: true } } },
+    with: {
+      solicitacao: {
+        with: { negocio: { columns: { id: true, nome: true, slug: true } } },
+      },
+    },
   });
 
   if (!an) {
@@ -219,7 +223,13 @@ export async function atualizarSituacaoAnexoAction(
     if (acao === "promover_a_imagem") {
       const anAtualizado = await db.query.anexo.findFirst({
         where: (a, { eq }) => eq(a.id, anexoId),
-        with: { solicitacao: { with: { negocio: true } } },
+        with: {
+          solicitacao: {
+            with: {
+              negocio: { columns: { id: true, nome: true, slug: true } },
+            },
+          },
+        },
       });
 
       const solicitacao = anAtualizado?.solicitacao as

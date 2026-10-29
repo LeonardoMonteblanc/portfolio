@@ -1,5 +1,6 @@
 // src/infrastructure/db/schema/negocio-categoria.ts
 import { pgTable, uuid, timestamp, primaryKey } from "drizzle-orm/pg-core";
+import { relations } from "drizzle-orm";
 import { negocio } from "./negocio";
 import { categoria } from "./categoria";
 
@@ -18,6 +19,20 @@ export const negocioCategoria = pgTable(
   },
   (table) => ({
     pk: primaryKey({ columns: [table.negocioId, table.categoriaId] }),
+  }),
+);
+
+export const negocioCategoriaRelations = relations(
+  negocioCategoria,
+  ({ one }) => ({
+    negocio: one(negocio, {
+      fields: [negocioCategoria.negocioId],
+      references: [negocio.id],
+    }),
+    categoria: one(categoria, {
+      fields: [negocioCategoria.categoriaId],
+      references: [categoria.id],
+    }),
   }),
 );
 
