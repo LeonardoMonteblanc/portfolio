@@ -22,13 +22,7 @@ import {
 } from "@/ui/components/card";
 import { Textarea } from "@/ui/components/textarea";
 import { Label } from "@/ui/components/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/ui/components/select";
+import { NativeSelect } from "@/ui/components/native-select";
 import { Badge } from "@/ui/components/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/ui/components/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/ui/components/tabs";
@@ -85,6 +79,23 @@ const TIPO_LABELS: Record<string, string> = {
   inclusao: "Inclusão",
   atualizacao: "Atualização",
 };
+
+const DECISAO_OPTIONS = [
+  { value: "aprovar", label: "Aprovar" },
+  { value: "reprovar", label: "Reprovar" },
+  { value: "solicitar_correcao", label: "Solicitar Correção" },
+] as const;
+
+const FORUM_TIPO_OPTIONS = [
+  { value: "comentario", label: "Comentário" },
+  { value: "concordancia", label: "Concordância" },
+  { value: "discordancia", label: "Discordância" },
+] as const;
+
+const CONTESTACAO_TIPO_OPTIONS = [
+  { value: "oficial", label: "Contestação Oficial (abre votação)" },
+  { value: "manifesta", label: "Manifestação (apenas registro)" },
+] as const;
 
 function SituacaoBadge({ situacao }: { situacao: string }) {
   const variants: Record<
@@ -382,27 +393,21 @@ export default async function SolicitacaoDetailPage({
 
                 <div className="space-y-2">
                   <Label htmlFor="decisao">Decisão</Label>
-                  <Select name="decisao" required>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione uma ação" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {sol.situacao === "recebida" ||
-                      sol.situacao === "em_fila_contestacao" ? (
-                        <>
-                          <SelectItem value="aprovar">Aprovar</SelectItem>
-                          <SelectItem value="reprovar">Reprovar</SelectItem>
-                          <SelectItem value="solicitar_correcao">
-                            Solicitar Correção
-                          </SelectItem>
-                        </>
-                      ) : (
-                        <SelectItem value="" disabled>
-                          Já analisada
-                        </SelectItem>
-                      )}
-                    </SelectContent>
-                  </Select>
+                  <NativeSelect name="decisao" id="decisao" required value="">
+                    <option value="">Selecione uma ação</option>
+                    {sol.situacao === "recebida" ||
+                    sol.situacao === "em_fila_contestacao" ? (
+                      DECISAO_OPTIONS.map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </option>
+                      ))
+                    ) : (
+                      <option value="" disabled>
+                        Já analisada
+                      </option>
+                    )}
+                  </NativeSelect>
                 </div>
 
                 <div className="space-y-2">
@@ -560,16 +565,14 @@ async function ForumTab({
             </div>
             <div className="space-y-2">
               <Label htmlFor="forum-tipo">Tipo</Label>
-              <Select name="tipo">
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o tipo" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="comentario">Comentário</SelectItem>
-                  <SelectItem value="concordancia">Concordância</SelectItem>
-                  <SelectItem value="discordancia">Discordância</SelectItem>
-                </SelectContent>
-              </Select>
+              <NativeSelect name="tipo" id="forum-tipo" value="" required>
+                <option value="">Selecione o tipo</option>
+                {FORUM_TIPO_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </NativeSelect>
             </div>
             <Button type="submit">
               <Send className="h-4 w-4 mr-2" />
@@ -683,19 +686,14 @@ async function ContestacaoTab({
             </div>
             <div className="space-y-2">
               <Label htmlFor="contestacao-tipo">Tipo</Label>
-              <Select name="tipo">
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o tipo" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="oficial">
-                    Contestação Oficial (abre votação)
-                  </SelectItem>
-                  <SelectItem value="manifesta">
-                    Manifestação (apenas registro)
-                  </SelectItem>
-                </SelectContent>
-              </Select>
+              <NativeSelect name="tipo" id="contestacao-tipo" value="" required>
+                <option value="">Selecione o tipo</option>
+                {CONTESTACAO_TIPO_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </NativeSelect>
             </div>
             <Button type="submit">
               <Plus className="h-4 w-4 mr-2" />
