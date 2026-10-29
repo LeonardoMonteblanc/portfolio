@@ -23,8 +23,7 @@ export async function POST(request: NextRequest) {
 
     const [duplicataNome, duplicataContato] = await Promise.all([
       db.query.negocio.findFirst({
-        where: (n, { sql }) =>
-          sql`lower(unaccent(${negocio.nome})) = ${nomeNormalizado}`,
+        where: (n, { sql }) => sql`lower(${negocio.nome}) = ${nomeNormalizado}`,
       }),
       db.query.contato.findFirst({
         where: (c, { sql }) =>

@@ -1,4 +1,4 @@
-// src/middleware.ts
+// src/proxy.ts
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { validarJWT } from "@/infrastructure/auth/jwt";
@@ -6,7 +6,7 @@ import { validarJWT } from "@/infrastructure/auth/jwt";
 const ROTAS_PUBLICAS = ["/login", "/recuperar-senha", "/api/webhooks"];
 const ROTAS_ADMIN = ["/admin"];
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Permitir rotas públicas

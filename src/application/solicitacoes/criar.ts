@@ -105,8 +105,7 @@ export async function criarSolicitacaoAction(
     .replace(/[\u0300-\u036f]/g, "");
   const [duplicataNome, duplicataContato] = await Promise.all([
     db.query.negocio.findFirst({
-      where: (n, { sql }) =>
-        sql`lower(unaccent(${negocio.nome})) = ${nomeNormalizado}`,
+      where: (n, { sql }) => sql`lower(${negocio.nome}) = ${nomeNormalizado}`,
     }),
     db.query.contato.findFirst({
       where: (c, { sql }) =>
