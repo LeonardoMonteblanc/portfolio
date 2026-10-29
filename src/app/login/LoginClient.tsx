@@ -1,4 +1,4 @@
-// src/app/(admin)/login/page.tsx
+// src/app/login/LoginClient.tsx
 "use client";
 
 import { useState } from "react";
@@ -16,7 +16,7 @@ import {
 } from "@/ui/components/card";
 import { AlertCircle, Mail, Lock } from "lucide-react";
 
-export default function LoginPage() {
+export default function LoginClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirect = searchParams.get("redirect") || "/admin";

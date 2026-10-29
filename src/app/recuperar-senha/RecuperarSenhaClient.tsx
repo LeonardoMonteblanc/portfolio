@@ -1,4 +1,4 @@
-// src/app/(admin)/recuperar-senha/page.tsx
+// src/app/recuperar-senha/RecuperarSenhaClient.tsx
 "use client";
 
 import { useState } from "react";
@@ -16,7 +16,7 @@ import {
 import { Mail, AlertCircle, CheckCircle } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 
-export default function RecuperarSenhaPage() {
+export default function RecuperarSenhaClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const stage = searchParams.get("stage") || "solicitar";
