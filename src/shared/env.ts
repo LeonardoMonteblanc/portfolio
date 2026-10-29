@@ -12,7 +12,10 @@ const envSchema = z.object({
   R2_ACCESS_KEY_ID: z.string().min(1),
   R2_SECRET_ACCESS_KEY: z.string().min(1),
   R2_BUCKET_NAME: z.string().min(1),
-  R2_PUBLIC_URL: z.string().url().optional().or(z.literal("")),
+  R2_PUBLIC_URL: z.preprocess(
+    (val) => (val === "" || val === "undefined" ? undefined : val),
+    z.string().url().optional(),
+  ),
   UPSTASH_REDIS_URL: z.string().url(),
   UPSTASH_REDIS_TOKEN: z.string().min(1),
   SENTRY_DSN: z.string().url().optional().or(z.literal("")),
