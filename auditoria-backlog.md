@@ -4,13 +4,14 @@
 
 ### Funcionalidades preservadas
 
-| Feature                                                                                            | Antes                                                            | Depois                                                   | Equivalência  |
-| -------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- | -------------------------------------------------------- | ------------- |
-| Página inicial (home)                                                                              | Com erro de hidratação #441 (event handlers em Server Component) | Corrigido - CategoryFilter como Client Component         | ✅ preservada |
-| /solicitar (formulário público)                                                                    | Mensagem de sucesso aparecia o tempo todo                        | Corrigido - só aparece com `?sucesso=1`                  | ✅ preservada |
-| 7 rotas admin (/solicitacoes, /negocios, /categorias, /forum, /votacoes, /imagens, /configuracoes) | Falhavam após login (tokenVersion mismatch)                      | Script de correção criado (`db:update:admin-token`)      | ✅ preservada |
-| Schema `solicitacao`                                                                               | Coluna `origem_decisao` ausente no banco                         | Migration aplicada localmente + script `db:migrate:prod` | ✅ preservada |
-| Autenticação admin                                                                                 | JWT com tokenVersion                                             | Mantido, script para sincronizar produção                | ✅ preservada |
+| Feature                                                                                            | Antes                                                            | Depois                                                     | Equivalência  |
+| -------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- | ---------------------------------------------------------- | ------------- |
+| Página inicial (home)                                                                              | Com erro de hidratação #441 (event handlers em Server Component) | Corrigido - CategoryFilter como Client Component           | ✅ preservada |
+| /solicitar (formulário público)                                                                    | Mensagem de sucesso aparecia o tempo todo                        | Corrigido - só aparece com `?sucesso=1`                    | ✅ preservada |
+| 7 rotas admin (/solicitacoes, /negocios, /categorias, /forum, /votacoes, /imagens, /configuracoes) | Falhavam após login (tokenVersion mismatch)                      | Script de correção criado (`db:update:admin-token`)        | ✅ preservada |
+| **Rotas admin com prefixo `/admin/`**                                                              | **Sidebar linkava para `/admin/*` mas rotas existiam em `/*`**   | **Reestruturado para `(admin)/admin/*` → URLs `/admin/*`** | ✅ preservada |
+| Schema `solicitacao`                                                                               | Coluna `origem_decisao` ausente no banco                         | Migration aplicada localmente + script `db:migrate:prod`   | ✅ preservada |
+| Autenticação admin                                                                                 | JWT com tokenVersion                                             | Mantido, script para sincronizar produção                  | ✅ preservada |
 
 ### Remoções realizadas nesta sessão
 
@@ -20,7 +21,7 @@
 
 ### Checagem de diffs
 
-- `git diff --stat` da sessão: 5 files changed, 96 insertions(+), 54 deletions(-)
+- `git diff --stat` da sessão: 9 files changed, 14 insertions(+), 8 deletions(-) (renames count as 0 net change)
 - Linhas funcionais removidas sem substituição: 0
 - Testes removidos/skipados: 0
 - Campos/colunas removidos de schema/form/payload: 0
@@ -47,17 +48,20 @@
 
 ### P2 — Rotas quebradas pós-login
 
-| Rota                 | Causa raiz                                                                                                     | Arquivos alterados                                                                                  | Funcional? | Visual (FASE 5)? |
-| -------------------- | -------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- | ---------- | ---------------- |
-| /admin/solicitacoes  | Admin layout valida JWT; `tokenVersion` no banco ≠ `tv` no JWT → `getAdmin()` retorna null → redirect `/login` | `src/scripts/update-admin-token-version.ts` (novo), `package.json` (script `db:update:admin-token`) | ✅ (local) | ✅               |
-| /admin/negocios      | Mesmo                                                                                                          | Mesmo                                                                                               | ✅ (local) | ✅               |
-| /admin/categorias    | Mesmo                                                                                                          | Mesmo                                                                                               | ✅ (local) | ✅               |
-| /admin/forum         | Mesmo                                                                                                          | Mesmo                                                                                               | ✅ (local) | ✅               |
-| /admin/votacoes      | Mesmo                                                                                                          | Mesmo                                                                                               | ✅ (local) | ✅               |
-| /admin/imagens       | Mesmo                                                                                                          | Mesmo                                                                                               | ✅ (local) | ✅               |
-| /admin/configuracoes | Mesmo                                                                                                          | Mesmo                                                                                               | ✅ (local) | ✅               |
+| Rota                 | Causa raiz                                                                            | Arquivos alterados                                                               | Funcional? | Visual (FASE 5)? |
+| -------------------- | ------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- | ---------- | ---------------- |
+| /admin/solicitacoes  | **Dupla causa:** (1) Rotas existiam em `/*` não `/admin/*`; (2) tokenVersion mismatch | Reestrutura pastas + `src/scripts/update-admin-token-version.ts`, `package.json` | ✅ (local) | ✅               |
+| /admin/negocios      | Mesmo                                                                                 | Mesmo                                                                            | ✅ (local) | ✅               |
+| /admin/categorias    | Mesmo                                                                                 | Mesmo                                                                            | ✅ (local) | ✅               |
+| /admin/forum         | Mesmo                                                                                 | Mesmo                                                                            | ✅ (local) | ✅               |
+| /admin/votacoes      | Mesmo                                                                                 | Mesmo                                                                            | ✅ (local) | ✅               |
+| /admin/imagens       | Mesmo                                                                                 | Mesmo                                                                            | ✅ (local) | ✅               |
+| /admin/configuracoes | Mesmo                                                                                 | Mesmo                                                                            | ✅ (local) | ✅               |
 
-**Detalhamento da causa raiz:** O `getAdmin()` em `src/lib/auth.ts:43` verifica `admin.tokenVersion !== payload.tv`. O seed cria admin com `tokenVersion: 1`, mas o Neon produção provavelmente tem `tokenVersion: 0` ou `null` (valor default do banco). O JWT gerado no login inclui `tv: 1`, mas a validação falha porque o banco tem valor diferente. Solução: script `db:update:admin-token` força `tokenVersion = 1` e `ativo = true` no admin de produção.
+**Detalhamento da causa raiz:** Duas causas independentes:
+
+1. **Estrutura de rotas:** Route groups `(admin)` não afetam URLs. Pastas em `(admin)/*` criavam rotas `/solicitacoes` mas sidebar linkava `/admin/solicitacoes` → 404. Corrigido movendo para `(admin)/admin/*`.
+2. **tokenVersion mismatch:** `getAdmin()` em `src/lib/auth.ts:43` verifica `admin.tokenVersion !== payload.tv`. Seed cria admin com `tokenVersion: 1`, mas Neon produção tem valor diferente. JWT inclui `tv: 1` mas validação falha. Script `db:update:admin-token` corrige.
 
 ### Correção adicional — Página inicial (hydration error #441)
 
@@ -72,6 +76,19 @@
 - **Causa raiz:** `SuccessMessage` envolto em `<Suspense fallback={<div>Carregando...</div>}>` causava exibição incorreta. Removido fallback visual, mantido `Suspense` com `fallback={null}` para satisfazer requisito do `useSearchParams()`.
 - **Arquivos alterados:** `src/app/(public)/solicitar/page.tsx`
 - **Evidência:** Build passa, mensagem só aparece com `?sucesso=1`
+
+### Correção adicional — Estrutura de rotas admin `/admin/*`
+
+- **Causa raiz:** Route groups `(admin)` não afetam URLs no Next.js. Pastas irmãs dentro de `(admin)` criavam rotas no nível raiz (`/solicitacoes`, `/negocios`, etc.) mas o sidebar linkava para `/admin/solicitacoes`, `/admin/negocios` → **404**.
+- **Arquivos alterados:**
+  - Reestrutura: `src/app/(admin)/solicitacoes/*` → `src/app/(admin)/admin/solicitacoes/*`
+  - Reestrutura: `src/app/(admin)/negocios/*` → `src/app/(admin)/admin/negocios/*`
+  - Reestrutura: `src/app/(admin)/categorias/*` → `src/app/(admin)/admin/categorias/*`
+  - Reestrutura: `src/app/(admin)/forum/*` → `src/app/(admin)/admin/forum/*`
+  - Reestrutura: `src/app/(admin)/votacoes/*` → `src/app/(admin)/admin/votacoes/*`
+  - Reestrutura: `src/app/(admin)/imagens/*` → `src/app/(admin)/admin/imagens/*`
+  - Reestrutura: `src/app/(admin)/configuracoes/*` → `src/app/(admin)/admin/configuracoes/*`
+- **Evidência:** Build gera rotas corretas `/admin/solicitacoes`, `/admin/negocios`, `/admin/categorias`, `/admin/forum`, `/admin/votacoes`, `/admin/imagens`, `/admin/configuracoes`. Sidebar links agora funcionam.
 
 ## 2. Identidade visual por rota (FASE 5)
 
