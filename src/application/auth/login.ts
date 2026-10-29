@@ -6,7 +6,7 @@ import { db } from "@/infrastructure/db/client";
 import { administrador } from "@/infrastructure/db/schema/administrador";
 import { eq } from "drizzle-orm";
 import { hashSenha, verificarSenha } from "@/infrastructure/auth/hash";
-import { gerarJWT } from "@/infrastructure/auth/jwt";
+import { gerarJWTNode } from "@/infrastructure/auth/jwt-node";
 import { rateLimitLogin } from "@/infrastructure/auth/rate-limit";
 import {
   logLogin,
@@ -84,7 +84,7 @@ export async function loginAction(prevState: unknown, formData: FormData) {
   }
 
   // Gerar JWT
-  const token = await gerarJWT(admin);
+  const token = gerarJWTNode(admin);
 
   // Log sucesso
   await db.insert(logLogin).values({

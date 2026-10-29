@@ -1,9 +1,8 @@
 // src/app/api/auth/login/route.ts
 import { loginAction } from "@/application/auth/login";
 import { NextRequest, NextResponse } from "next/server";
-import { JWT_SECRET } from "@/infrastructure/auth/jwt";
+import { validarJWTNode } from "@/infrastructure/auth/jwt-node";
 import { createHash } from "crypto";
-import { jwtVerify } from "jose";
 
 export async function POST(request: NextRequest) {
   const contentType = request.headers.get("content-type") || "";
@@ -31,22 +30,17 @@ export async function POST(request: NextRequest) {
   }
 
   const secretHash = createHash("sha256")
-    .update(Buffer.from(JWT_SECRET))
+    .update(result.token || "")
     .digest("hex")
     .slice(0, 16);
 
-  // Auto-teste: verificar o token gerado
+  // Auto-teste: verificar o token gerado com jsonwebtoken
   let selfVerify: any;
   if (result.token) {
-    try {
-      const verified = await jwtVerify(result.token, JWT_SECRET, {
-        issuer: "diretorio-comunitario",
-        audience: "painel-admin",
-      });
-      selfVerify = { success: true, payload: verified.payload };
-    } catch (e: any) {
-      selfVerify = { success: false, error: e.message, code: e.code };
-    }
+    const payload = validarJWTNode(result.token);
+    selfVerify = payload
+      ? { success: true, payload }
+      : { success: false, error: "validarJWTNode returned null" };
   }
 
   const response = NextResponse.json({

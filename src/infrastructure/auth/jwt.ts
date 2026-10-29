@@ -3,7 +3,7 @@ import { SignJWT, jwtVerify } from "jose";
 import { env } from "@/shared/env";
 import { Administrador } from "@/domain/entities/administrador";
 
-export const JWT_SECRET = new TextEncoder().encode(env.JWT_SECRET);
+const JWT_SECRET = new TextEncoder().encode(env.JWT_SECRET);
 export const JWT_ISSUER = "diretorio-comunitario";
 export const JWT_AUDIENCE = "painel-admin";
 
@@ -14,6 +14,7 @@ export interface JWTPayload {
   exp: number;
 }
 
+// Funções jose (para Server Components / Edge Runtime)
 export async function gerarJWT(admin: Administrador): Promise<string> {
   const agora = Math.floor(Date.now() / 1000);
   const expiracao = agora + 7 * 24 * 60 * 60; // 7 dias
@@ -51,4 +52,9 @@ export async function obterAdminIdDoToken(
 ): Promise<string | null> {
   const payload = await validarJWT(token);
   return payload?.adminId ?? null;
+}
+
+// Exportar segredo para uso em API routes com jsonwebtoken
+export function getJWTSecretString(): string {
+  return env.JWT_SECRET;
 }
