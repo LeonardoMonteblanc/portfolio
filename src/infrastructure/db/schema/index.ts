@@ -15,5 +15,7 @@ export * from "./forum-publicacao";
 export * from "./contestacao";
 export * from "./votacao";
 export * from "./voto";
+export * from "./imagem";
+export * from "./anexo";
 export * from "./logs";
 export { healthCheck } from "./health-check";
