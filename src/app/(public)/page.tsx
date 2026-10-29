@@ -144,28 +144,23 @@ function NegocioCard({ negocio }: NegocioCardProps) {
   );
 }
 
-function CategoryPill({
-  nome,
-  slug,
-  selecionada,
-  onClick,
-}: {
+interface CategoryPillProps {
   nome: string;
   slug: string;
-  selecionada: boolean;
-  onClick: () => void;
-}) {
+  selecionada?: boolean;
+}
+
+function CategoryPill({ nome, slug, selecionada = false }: CategoryPillProps) {
   return (
-    <button
-      onClick={onClick}
-      className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all duration-200 cursor-pointer ${
+    <span
+      className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all duration-200 ${
         selecionada
           ? "bg-primary text-primary-foreground shadow-lg"
           : "bg-secondary text-secondary-foreground hover:bg-primary/10 hover:text-primary"
       }`}
     >
       {nome}
-    </button>
+    </span>
   );
 }
 
@@ -275,7 +270,6 @@ async function HomePage() {
                   nome={cat.nome}
                   slug={cat.slug}
                   selecionada={false}
-                  onClick={() => {}}
                 />
               </Link>
             ))}
