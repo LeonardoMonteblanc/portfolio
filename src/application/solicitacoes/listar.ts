@@ -65,17 +65,28 @@ export async function listarSolicitacoesAction(
   const whereSql = whereClause ? sql`WHERE ${whereClause}` : sql``;
 
   const [solicitacoesResult, totalResult] = await Promise.all([
-    db.execute(sql`
-      SELECT 
-        id, solicitante_id, negocio_id, tipo, situacao, origem_decisao,
-        declaracao_vinculo, dados_negocio_proposto, duplicata_detectada,
-        motivo_incompleta, analisada_em, observacoes_internas,
-        criado_em, atualizado_em
-      FROM solicitacao
-      ${whereSql}
-      ORDER BY criado_em DESC
-      LIMIT 20 OFFSET 0
-    `),
+    db
+      .select({
+        id: solicitacao.id,
+        solicitanteId: solicitacao.solicitanteId,
+        negocioId: solicitacao.negocioId,
+        tipo: solicitacao.tipo,
+        situacao: solicitacao.situacao,
+        origemDecisao: solicitacao.origemDecisao,
+        declaracaoVinculo: solicitacao.declaracaoVinculo,
+        dadosNegocioProposto: solicitacao.dadosNegocioProposto,
+        duplicataDetectada: solicitacao.duplicataDetectada,
+        motivoIncompleta: solicitacao.motivoIncompleta,
+        analisadaEm: solicitacao.analisadaEm,
+        observacoesInternas: solicitacao.observacoesInternas,
+        criadoEm: solicitacao.criadoEm,
+        atualizadoEm: solicitacao.atualizadoEm,
+      })
+      .from(solicitacao)
+      .where(whereClause)
+      .orderBy(desc(solicitacao.criadoEm))
+      .limit(20)
+      .offset(0),
     db
       .select({ count: sql<number>`count(*)` })
       .from(solicitacao)
