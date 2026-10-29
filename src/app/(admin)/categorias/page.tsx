@@ -22,10 +22,6 @@ import {
 import { Badge } from "@/ui/components/badge";
 import { Search, ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
-import {
-  SITUACOES,
-  SituacaoBadge,
-} from "@/app/(admin)/_components/admin-shared";
 
 export default async function CategoriasPage({
   searchParams,
