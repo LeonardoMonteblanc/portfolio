@@ -16,3 +16,5 @@ export * from "./log-forum";
 export * from "./log-contestacao";
 export * from "./log-votacao";
 export * from "./log-suspensao-admin";
+export * from "./log-imagem";
+export * from "./log-anexo";
