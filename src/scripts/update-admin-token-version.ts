@@ -1,28 +1,48 @@
 // src/scripts/update-admin-token-version.ts
-import { neon } from "@neondatabase/serverless";
-
-const sql = neon(process.env.DATABASE_URL!);
+import { db } from "@/infrastructure/db/client";
+import { administrador } from "@/infrastructure/db/schema/administrador";
+import { eq } from "drizzle-orm";
 
 async function updateAdminTokenVersion() {
-  console.log("Updating admin token_version...");
+  const email = "admin@guiabg.com.br";
 
-  try {
-    const result = await sql`
-      UPDATE public.administrador 
-      SET token_version = 1, ativo = true 
-      WHERE email = 'admin@guiabg.com.br'
-      RETURNING id, email, token_version, ativo
-    `;
+  const existing = await db.query.administrador.findFirst({
+    where: (a, { eq }) => eq(a.email, email),
+  });
 
-    console.log("Updated admin:", JSON.stringify(result, null, 2));
+  if (!existing) {
+    console.log("Admin not found:", email);
+    return;
+  }
 
-    if (result.length === 0) {
-      console.log("No admin found with email admin@guiabg.com.br");
-    } else {
-      console.log("Successfully updated admin token_version to 1");
-    }
-  } catch (e) {
-    console.error("Error:", e);
+  console.log("Current admin:", {
+    id: existing.id,
+    email: existing.email,
+    nome: existing.nome,
+    ativo: existing.ativo,
+    tokenVersion: existing.tokenVersion,
+  });
+
+  if (existing.tokenVersion !== 1) {
+    await db
+      .update(administrador)
+      .set({ tokenVersion: 1 })
+      .where(eq(administrador.id, existing.id));
+
+    console.log("✅ Updated tokenVersion to 1");
+  } else {
+    console.log("✅ tokenVersion is already 1");
+  }
+
+  if (!existing.ativo) {
+    await db
+      .update(administrador)
+      .set({ ativo: true })
+      .where(eq(administrador.id, existing.id));
+
+    console.log("✅ Updated ativo to true");
+  } else {
+    console.log("✅ ativo is already true");
   }
 }
 

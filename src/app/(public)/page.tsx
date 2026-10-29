@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { buscarNegocios, listarCategoriasAtivas } from "@/application/catalogo";
 import { Button } from "@/ui/components/button";
-import { NativeSelect } from "@/ui/components/native-select";
 import {
   Card,
   CardContent,
@@ -9,8 +8,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/ui/components/card";
-import { Input } from "@/ui/components/input";
-import { Label } from "@/ui/components/label";
 import { Badge } from "@/ui/components/badge";
 import {
   MapPin,
@@ -21,6 +18,7 @@ import {
   Building2,
   Sparkles,
 } from "lucide-react";
+import { CategoryFilter } from "./_components/category-filter";
 
 export const dynamic = "force-dynamic";
 
@@ -259,34 +257,7 @@ async function HomePage() {
           </div>
 
           {/* Filtro de categoria com NativeSelect */}
-          <div className="mb-6">
-            <Label
-              htmlFor="filtro-categoria-home"
-              className="block text-sm font-medium text-gray-700 mb-2"
-            >
-              Filtrar por categoria
-            </Label>
-            <NativeSelect
-              id="filtro-categoria-home"
-              name="categoria"
-              value=""
-              onChange={(e) => {
-                const slug = e.target.value;
-                if (slug) {
-                  window.location.href = `/catalogo?categoria=${slug}`;
-                } else {
-                  window.location.href = "/catalogo";
-                }
-              }}
-            >
-              <option value="">Todas as categorias</option>
-              {categoriasAtivas.map((cat) => (
-                <option key={cat.id} value={cat.slug}>
-                  {cat.nome}
-                </option>
-              ))}
-            </NativeSelect>
-          </div>
+          <CategoryFilter categorias={categoriasAtivas} />
 
           <div className="flex flex-wrap gap-3">
             {categoriasAtivas.slice(0, 12).map((cat) => (

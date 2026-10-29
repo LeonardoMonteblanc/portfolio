@@ -888,7 +888,7 @@ export default function SolicitarPage() {
           </form>
         )}
 
-        <Suspense fallback={<div>Carregando...</div>}>
+        <Suspense fallback={null}>
           <SuccessMessage />
         </Suspense>
       </div>
