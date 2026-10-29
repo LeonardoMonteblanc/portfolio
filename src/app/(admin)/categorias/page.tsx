@@ -1,15 +1,7 @@
 // src/app/(admin)/categorias/page.tsx
-import { listarCategoriasAction } from "@/application/categorias/listar";
 import { Button } from "@/ui/components/button";
 import { Input } from "@/ui/components/input";
 import { Label } from "@/ui/components/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/ui/components/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/ui/components/card";
 import Link from "next/link";
 
@@ -47,19 +39,6 @@ export default async function CategoriasPage() {
                 />
               </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="ativa">Status</Label>
-              <Select value="" onValueChange={() => {}}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Todas" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">Todas</SelectItem>
-                  <SelectItem value="true">Ativas</SelectItem>
-                  <SelectItem value="false">Inativas</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
             <Button type="submit">
               <span className="mr-2">🔍</span>
               Filtrar
@@ -70,10 +49,10 @@ export default async function CategoriasPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Teste com Select e Input</CardTitle>
+          <CardTitle>Teste apenas com Input</CardTitle>
         </CardHeader>
         <CardContent>
-          <p>Formulário de filtro funcionando</p>
+          <p>Input funcionando</p>
         </CardContent>
       </Card>
     </div>
