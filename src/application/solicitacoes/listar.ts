@@ -63,11 +63,9 @@ export async function listarSolicitacoesAction(
     whereConditions.length > 0 ? and(...whereConditions) : undefined;
 
   const [solicitacoes, totalResult] = await Promise.all([
-    db.query.solicitacao.findMany({
-      orderBy: (s, { desc }) => desc(s.criadoEm),
-      limit: porPagina,
-      offset: (pagina - 1) * porPagina,
-    }),
+    db.execute(
+      sql`SELECT id, situacao, tipo, criado_em FROM solicitacao ORDER BY criado_em DESC LIMIT ${porPagina} OFFSET ${(pagina - 1) * porPagina}`,
+    ),
     db
       .select({ count: sql<number>`count(*)` })
       .from(solicitacao)
