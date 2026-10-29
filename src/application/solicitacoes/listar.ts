@@ -65,18 +65,7 @@ export async function listarSolicitacoesAction(
   const [solicitacoes, totalResult] = await Promise.all([
     db.query.solicitacao.findMany({
       where: whereClause,
-      with: {
-        solicitante: {
-          columns: {
-            id: true,
-            nome: true,
-            email: true,
-            telefone: true,
-            criadoEm: true,
-            // anonimizadoEm excluído para evitar erro de coluna inexistente em alguns ambientes
-          },
-        },
-      },
+      // with: { solicitante: true } temporariamente removido para debug
       orderBy: (s, { desc }) => desc(s.criadoEm),
       limit: porPagina,
       offset: (pagina - 1) * porPagina,
