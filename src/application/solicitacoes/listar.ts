@@ -68,6 +68,9 @@ export async function listarSolicitacoesAction(
     db
       .select({
         id: solicitacao.id,
+        situacao: solicitacao.situacao,
+        tipo: solicitacao.tipo,
+        criadoEm: solicitacao.criadoEm,
       })
       .from(solicitacao)
       .where(whereClause)
