@@ -54,14 +54,34 @@ export default function RootLayout({
           sizes="48x48"
           type="image/x-icon"
         />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  var theme = localStorage.getItem('theme');
+                  var systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                  document.documentElement.setAttribute('data-theme', theme || systemTheme || 'light');
+                } catch (e) {}
+              })();
+            `,
+          }}
+        />
+        <link
+          rel="icon"
+          href="/favicon.ico"
+          sizes="48x48"
+          type="image/x-icon"
+        />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         suppressHydrationWarning
       >
         <ThemeProvider
-          attribute="class"
+          attribute="data-theme"
           defaultTheme="light"
+          enableSystem
           disableTransitionOnChange
         >
           {children}
