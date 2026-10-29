@@ -10,22 +10,46 @@ import { db } from "@/infrastructure/db/client";
 import { administrador } from "@/infrastructure/db/schema/administrador";
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
-import { jwtVerify } from "jose";
+import { jwtVerify, SignJWT } from "jose";
 import { createHash } from "crypto";
 
 export async function GET() {
   const cookieStore = await cookies();
   const token = cookieStore.get("auth_token")?.value ?? null;
 
-  // Hash do segredo para diagnóstico (não expõe o segredo)
   const secretHash = createHash("sha256")
     .update(Buffer.from(JWT_SECRET))
     .digest("hex")
     .slice(0, 16);
 
+  // Teste: assinar e verificar no mesmo request
+  let selfTestResult: any;
+  try {
+    const testToken = await new SignJWT({ test: "data", tv: 1 })
+      .setProtectedHeader({ alg: "HS256" })
+      .setIssuer(JWT_ISSUER)
+      .setAudience(JWT_AUDIENCE)
+      .setIssuedAt(Math.floor(Date.now() / 1000))
+      .setExpirationTime(Math.floor(Date.now() / 1000) + 3600)
+      .sign(JWT_SECRET);
+
+    const verified = await jwtVerify(testToken, JWT_SECRET, {
+      issuer: JWT_ISSUER,
+      audience: JWT_AUDIENCE,
+    });
+    selfTestResult = { success: true, verified: verified.payload };
+  } catch (e: any) {
+    selfTestResult = { success: false, error: e.message, code: e.code };
+  }
+
   if (!token) {
     return NextResponse.json(
-      { error: "No token", step: "cookie", secretHash },
+      {
+        error: "No token",
+        step: "cookie",
+        secretHash,
+        selfTest: selfTestResult,
+      },
       { status: 401 },
     );
   }
@@ -48,6 +72,7 @@ export async function GET() {
         secretHash,
         issuer: JWT_ISSUER,
         audience: JWT_AUDIENCE,
+        selfTest: selfTestResult,
       },
       { status: 401 },
     );
@@ -55,7 +80,13 @@ export async function GET() {
 
   if (typeof payload.adminId !== "string" || typeof payload.tv !== "number") {
     return NextResponse.json(
-      { error: "Invalid payload types", step: "payload", payload, secretHash },
+      {
+        error: "Invalid payload types",
+        step: "payload",
+        payload,
+        secretHash,
+        selfTest: selfTestResult,
+      },
       { status: 401 },
     );
   }
@@ -78,6 +109,7 @@ export async function GET() {
         step: "db",
         adminId: payload.adminId,
         secretHash,
+        selfTest: selfTestResult,
       },
       { status: 401 },
     );
@@ -85,7 +117,13 @@ export async function GET() {
 
   if (!admin.ativo) {
     return NextResponse.json(
-      { error: "Admin inactive", step: "active", admin, secretHash },
+      {
+        error: "Admin inactive",
+        step: "active",
+        admin,
+        secretHash,
+        selfTest: selfTestResult,
+      },
       { status: 401 },
     );
   }
@@ -98,6 +136,7 @@ export async function GET() {
         dbTokenVersion: admin.tokenVersion,
         jwtTokenVersion: payload.tv,
         secretHash,
+        selfTest: selfTestResult,
       },
       { status: 401 },
     );
@@ -108,5 +147,6 @@ export async function GET() {
     admin: { id: admin.id, nome: admin.nome, email: admin.email },
     payload,
     secretHash,
+    selfTest: selfTestResult,
   });
 }
