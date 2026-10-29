@@ -62,7 +62,9 @@ export async function listarSolicitacoesAction(
   const whereClause =
     whereConditions.length > 0 ? and(...whereConditions) : undefined;
 
-  const [solicitacoes, totalResult] = await Promise.all([
+  const whereSql = whereClause ? sql`WHERE ${whereClause}` : sql``;
+
+  const [solicitacoesResult, totalResult] = await Promise.all([
     db.execute(sql`
       SELECT 
         id, solicitante_id, negocio_id, tipo, situacao, origem_decisao,
@@ -70,7 +72,7 @@ export async function listarSolicitacoesAction(
         motivo_incompleta, analisada_em, observacoes_internas,
         criado_em, atualizado_em
       FROM solicitacao
-      ${whereClause ? sql`WHERE ${whereClause}` : sql``}
+      ${whereSql}
       ORDER BY criado_em DESC
       LIMIT ${porPagina} OFFSET ${(pagina - 1) * porPagina}
     `),
@@ -83,7 +85,7 @@ export async function listarSolicitacoesAction(
   const total = Number(totalResult[0]?.count || 0);
 
   return {
-    solicitacoes: solicitacoes as any[],
+    solicitacoes: solicitacoesResult as any[],
     total,
     pagina,
     porPagina,
