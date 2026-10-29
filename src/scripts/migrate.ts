@@ -17,6 +17,11 @@ async function runMigrations() {
   const db = drizzle(client, { schema });
 
   try {
+    // Forçar aplicação de migration pendente para anonimizado_em
+    console.log("Checking/adding anonimizado_em column...");
+    await client`ALTER TABLE "solicitante" ADD COLUMN IF NOT EXISTS "anonimizado_em" timestamp with time zone`;
+    console.log("Column anonimizado_em ensured");
+
     await migrate(db, {
       migrationsFolder: "./src/infrastructure/db/migrations",
     });
