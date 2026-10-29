@@ -1,0 +1,584 @@
+// src/application/governanca/votacao.ts
+"use server";
+
+import { z } from "zod";
+import { db } from "@/infrastructure/db/client";
+import {
+  votacao,
+  voto,
+  contestacao,
+  administrador,
+  negocio,
+  solicitacao,
+} from "@/infrastructure/db/schema";
+import {
+  logVotacao,
+  logContestacao,
+  logSolicitacaoAnalisada,
+  logNegocio,
+} from "@/infrastructure/db/schema/logs";
+import { eq, and, desc, count, inArray, asc } from "drizzle-orm";
+import {
+  transicionarVotacao,
+  transicionarSolicitacao,
+  transicionarPublicacao,
+  apurarVotacao,
+  aplicarSuspensaoAdmin,
+  aplicarReativacaoAdmin,
+} from "@/domain/state-machines";
+import {
+  ErroTransicaoInvalida,
+  VotoDuplicado,
+  QuorumIncompleto,
+  JustificativaObrigatoria,
+} from "@/domain/errors";
+import { revalidatePath } from "next/cache";
+import { getAdmin } from "@/lib/auth";
+
+const abrirVotacaoSchema = z.object({
+  contestacaoId: z.string().uuid(),
+  pergunta: z.string().min(5).max(1000),
+  tipo: z.enum(["simples", "qualificada"]),
+  quorumMinimo: z.number().int().min(1),
+  maioriaNecessaria: z.number().int().min(50).max(100),
+  encerraEm: z.string().datetime(), // ISO string
+});
+
+export async function abrirVotacaoAction(
+  prevState: unknown,
+  formData: FormData,
+) {
+  const admin = await getAdmin();
+  if (!admin) return { error: "Não autorizado" };
+
+  const rawData = {
+    contestacaoId: formData.get("contestacaoId"),
+    pergunta: formData.get("pergunta"),
+    tipo: formData.get("tipo"),
+    quorumMinimo: parseInt(formData.get("quorumMinimo") as string, 10),
+    maioriaNecessaria: parseInt(formData.get("maioriaNecessaria") as string, 10),
+    encerraEm: formData.get("encerraEm"),
+  };
+
+  const parseResult = abrirVotacaoSchema.safeParse(rawData);
+  if (!parseResult.success) {
+    const errorMsg = Object.values(parseResult.error.flatten().fieldErrors)
+      .flat()
+      .join(", ");
+    return { error: errorMsg || "Dados inválidos" };
+  }
+
+  const { contestacaoId, pergunta, tipo, quorumMinimo, maioriaNecessaria, encerraEm } =
+    parseResult.data;
+
+  // Verificar se a contestação existe e está aberta
+  const cont = await db.query.contestacao.findFirst({
+    where: (c, { eq }) => eq(c.id, contestacaoId),
+    with: {
+      negocio: true,
+      solicitacaoOrigem: true,
+    },
+  });
+
+  if (!cont) {
+    return { error: "Contestação não encontrada" };
+  }
+
+  if (cont.situacao !== "aberta") {
+    return { error: "Contestação já possui votação ou está encerrada" };
+  }
+
+  // Buscar admins ativos para o quórum
+  const adminsAtivos = await db.query.administrador.findMany({
+    where: (a, { eq }) => eq(a.ativo, true),
+    columns: { id: true },
+  });
+
+  const adminIds = new Set(adminsAtivos.map((a) => a.id));
+
+  // Verificar se o autor da contestação está no quórum (pode votar)
+  if (!adminIds.has(cont.autorId)) {
+    // O autor pode não estar ativo, mas a votação ainda pode prosseguir
+    // O quórum é baseado nos admins ativos no momento
+  }
+
+  await db.transaction(async (tx) => {
+    // Criar votação
+    const [novaVotacao] = await tx
+      .insert(votacao)
+      .values({
+        contestacaoId,
+        pergunta,
+        tipo,
+        quorumMinimo: adminIds.size, // Quórum = admins ativos
+        maioriaNecessaria,
+        situacao: "aberta",
+        encerraEm: new Date(encerraEm),
+      })
+      .returning();
+
+    // Atualizar contestação
+    await tx
+      .update(contestacao)
+      .set({
+        situacao: "em_votacao",
+        votacaoId: novaVotacao.id,
+      })
+      .where(eq(contestacao.id, contestacaoId));
+
+    // Log de auditoria
+    await tx.insert(logVotacao).values({
+      atorTipo: "admin",
+      atorId: admin.id,
+      votacaoId: novaVotacao.id,
+      acao: "iniciar",
+      situacaoNova: "aberta",
+    });
+
+    await tx.insert(logContestacao).values({
+      atorTipo: "admin",
+      atorId: admin.id,
+      contestacaoId,
+      acao: "iniciar_votacao",
+      situacaoAnterior: "aberta",
+      situacaoNova: "em_votacao",
+    });
+
+    // Atualizar solicitação origem se houver
+    if (cont.solicitacaoOrigemId) {
+      const sol = await tx.query.solicitacao.findFirst({
+        where: (s, { eq }) => eq(s.id, cont.solicitacaoOrigemId),
+      });
+
+      if (sol) {
+        try {
+          const novaSituacao = transicionarSolicitacao(sol.situacao, "ABRIR_CONTESTACAO", {
+            justificativa: "Votação iniciada",
+          });
+
+          await tx
+            .update(solicitacao)
+            .set({ situacao: novaSituacao })
+            .where(eq(solicitacao.id, cont.solicitacaoOrigemId));
+
+          await tx.insert(logSolicitacaoAnalisada).values({
+            atorTipo: "admin",
+            atorId: admin.id,
+            solicitacaoId: cont.solicitacaoOrigemId,
+            decisao: "abrir_votacao",
+          });
+        } catch (e) {
+          if (!(e instanceof ErroTransicaoInvalida)) throw e;
+        }
+      }
+    }
+
+    // Ocultar negócio do catálogo se estiver publicado
+    if (cont.negocio.situacaoPublicacao === "publicado") {
+      await tx
+        .update(negocio)
+        .set({ situacaoPublicacao: "oculto_contestacao" })
+        .where(eq(negocio.id, cont.negocioId));
+
+      await tx.insert(logNegocio).values({
+        atorTipo: "sistema",
+        negocioId: cont.negocioId,
+        acao: "ocultar_por_contestacao",
+        snapshotAntes: { situacaoPublicacao: "publicado" },
+        snapshotDepois: { situacaoPublicacao: "oculto_contestacao" },
+      });
+    }
+  });
+
+  revalidatePath(`/admin/solicitacoes`);
+  revalidatePath(`/admin/negocios/${cont.negocioId}`);
+
+  return { success: true };
+}
+
+const registrarVotoSchema = z.object({
+  votacaoId: z.string().uuid(),
+  escolha: z.enum(["sim", "nao", "abstencao"]),
+});
+
+export async function registrarVotoAction(
+  prevState: unknown,
+  formData: FormData,
+) {
+  const admin = await getAdmin();
+  if (!admin) return { error: "Não autorizado" };
+
+  const rawData = {
+    votacaoId: formData.get("votacaoId"),
+    escolha: formData.get("escolha"),
+  };
+
+  const parseResult = registrarVotoSchema.safeParse(rawData);
+  if (!parseResult.success) {
+    const errorMsg = Object.values(parseResult.error.flatten().fieldErrors)
+      .flat()
+      .join(", ");
+    return { error: errorMsg || "Dados inválidos" };
+  }
+
+  const { votacaoId, escolha } = parseResult.data;
+
+  // Buscar votação com contestação e negócio
+  const vot = await db.query.votacao.findFirst({
+    where: (v, { eq }) => eq(v.id, votacaoId),
+    with: {
+      contestacao: {
+        with: {
+          negocio: true,
+          solicitacaoOrigem: true,
+        },
+      },
+    },
+  });
+
+  if (!vot) {
+    return { error: "Votação não encontrada" };
+  }
+
+  if (vot.situacao !== "aberta") {
+    return { error: "Votação não está aberta para votação" };
+  }
+
+  // Verificar se a votação já encerrou
+  if (new Date(vot.encerraEm) < new Date()) {
+    return { error: "Prazo de votação encerrado" };
+  }
+
+  // Buscar admins ativos (quórum)
+  const adminsAtivos = await db.query.administrador.findMany({
+    where: (a, { eq }) => eq(a.ativo, true),
+    columns: { id: true },
+  });
+  const adminIdsAtivos = new Set(adminsAtivos.map((a) => a.id));
+
+  // Verificar se admin está no quórum
+  if (!adminIdsAtivos.has(admin.id)) {
+    return { error: "Admin não está no quórum (não está ativo)" };
+  }
+
+  // Buscar votos existentes
+  const votosExistentes = await db.query.voto.findMany({
+    where: (v, { eq }) => eq(v.votacaoId, votacaoId),
+  });
+
+  // Converter para formato do domínio
+  const votosInfo = votosExistentes.map((v) => ({
+    adminId: v.adminId,
+    escolha: v.valor === "sim" ? "aprovacao" : v.valor === "nao" ? "rejeicao" : "abstencao",
+    estado: "ativo" as const,
+    criadoEm: v.criadoEm,
+  }));
+
+  // Validar transição de estado
+  try {
+    transicionarVotacao(vot.situacao, "REGISTRAR_VOTO", {
+      votos: votosInfo,
+      adminsAtivos: adminIdsAtivos,
+      adminId: admin.id,
+      escolha: escolha === "sim" ? "aprovacao" : escolha === "nao" ? "rejeicao" : undefined,
+    });
+  } catch (e) {
+    if (e instanceof VotoDuplicado) {
+      return { error: "Você já votou nesta votação" };
+    }
+    if (e instanceof ErroTransicaoInvalida) {
+      return { error: "Não é possível votar no momento" };
+    }
+    throw e;
+  }
+
+  // Mapear escolha para valor do banco
+  const valorMap = { sim: "sim", nao: "nao", abstencao: "abstencao" };
+
+  await db.transaction(async (tx) => {
+    // Registrar voto
+    await tx.insert(voto).values({
+      votacaoId,
+      adminId: admin.id,
+      valor: valorMap[escolha],
+    });
+
+    // Atualizar contadores na votação
+    const votosSim = votosExistentes.filter((v) => v.valor === "sim").length + (escolha === "sim" ? 1 : 0);
+    const votosNao = votosExistentes.filter((v) => v.valor === "nao").length + (escolha === "nao" ? 1 : 0);
+    const votosAbstencao = votosExistentes.filter((v) => v.valor === "abstencao").length + (escolha === "abstencao" ? 1 : 0);
+
+    await tx
+      .update(votacao)
+      .set({
+        totalVotos: votosExistentes.length + 1,
+        votosSim,
+        votosNao,
+        votosAbstencao,
+      })
+      .where(eq(votacao.id, votacaoId));
+
+    // Log de auditoria
+    await tx.insert(logVotacao).values({
+      atorTipo: "admin",
+      atorId: admin.id,
+      votacaoId,
+      acao: "votar",
+      situacaoAnterior: vot.situacao,
+      situacaoNova: vot.situacao,
+    });
+  });
+
+  revalidatePath(`/admin/solicitacoes`);
+  revalidatePath(`/admin/negocios/${vot.contestacao.negocioId}`);
+
+  return { success: true };
+}
+
+const apurarVotacaoSchema = z.object({
+  votacaoId: z.string().uuid(),
+});
+
+export async function apurarVotacaoAction(
+  prevState: unknown,
+  formData: FormData,
+) {
+  const admin = await getAdmin();
+  if (!admin) return { error: "Não autorizado" };
+
+  const rawData = {
+    votacaoId: formData.get("votacaoId"),
+  };
+
+  const parseResult = apurarVotacaoSchema.safeParse(rawData);
+  if (!parseResult.success) {
+    return { error: "Dados inválidos" };
+  }
+
+  const { votacaoId } = parseResult.data;
+
+  const vot = await db.query.votacao.findFirst({
+    where: (v, { eq }) => eq(v.id, votacaoId),
+    with: {
+      contestacao: {
+        with: {
+          negocio: true,
+          solicitacaoOrigem: true,
+        },
+      },
+    },
+  });
+
+  if (!vot) {
+    return { error: "Votação não encontrada" };
+  }
+
+  if (vot.situacao !== "aberta") {
+    return { error: "Votação não está em andamento" };
+  }
+
+  // Buscar admins ativos (quórum)
+  const adminsAtivos = await db.query.administrador.findMany({
+    where: (a, { eq }) => eq(a.ativo, true),
+    columns: { id: true },
+  });
+  const adminIdsAtivos = new Set(adminsAtivos.map((a) => a.id));
+
+  // Buscar votos
+  const votosExistentes = await db.query.voto.findMany({
+    where: (v, { eq }) => eq(v.votacaoId, votacaoId),
+  });
+
+  const votosInfo = votosExistentes.map((v) => ({
+    adminId: v.adminId,
+    escolha: v.valor === "sim" ? "aprovacao" : v.valor === "nao" ? "rejeicao" : "abstencao",
+    estado: "ativo" as const,
+    criadoEm: v.criadoEm,
+  }));
+
+  // Validar transição e apurar
+  try {
+    const novaSituacao = transicionarVotacao(vot.situacao, "CONCLUIR_VOTACAO", {
+      votos: votosInfo,
+      adminsAtivos: adminIdsAtivos,
+    });
+
+    const apuracao = apurarVotacao(votosInfo, adminIdsAtivos);
+
+    await db.transaction(async (tx) => {
+      // Atualizar votação
+      await tx
+        .update(votacao)
+        .set({
+          situacao: "encerrada",
+          encerradaEm: new Date(),
+          resultado: apuracao.situacao,
+          totalVotos: apuracao.aprovacoes + apuracao.rejeicoes,
+          votosSim: apuracao.aprovacoes,
+          votosNao: apuracao.rejeicoes,
+        })
+        .where(eq(votacao.id, votacaoId));
+
+      // Atualizar contestação
+      await tx
+        .update(contestacao)
+        .set({
+          situacao: "encerrada",
+          decididaEm: new Date(),
+        })
+        .where(eq(contestacao.id, vot.contestacaoId));
+
+      // Log de auditoria
+      await tx.insert(logVotacao).values({
+        atorTipo: "admin",
+        atorId: admin.id,
+        votacaoId,
+        acao: "apurar",
+        situacaoAnterior: "aberta",
+        situacaoNova: "encerrada",
+        resultado: apuracao.situacao,
+        totalVotos: apuracao.aprovacoes + apuracao.rejeicoes,
+      });
+
+      await tx.insert(logContestacao).values({
+        atorTipo: "admin",
+        atorId: admin.id,
+        contestacaoId: vot.contestacaoId,
+        acao: "encerrar",
+        situacaoAnterior: "em_votacao",
+        situacaoNova: "encerrada",
+        resultado: apuracao.situacao,
+      });
+
+      // Aplicar resultado na solicitação e negócio
+      if (vot.contestacao.solicitacaoOrigemId) {
+        const sol = await tx.query.solicitacao.findFirst({
+          where: (s, { eq }) => eq(s.id, vot.contestacao.solicitacaoOrigemId!),
+        });
+
+        if (sol) {
+          try {
+            const novaSituacao = transicionarSolicitacao(sol.situacao, "CONCLUIR_VOTACAO", {
+              resultadoVotacao: apuracao.situacao,
+            });
+
+            await tx
+              .update(solicitacao)
+              .set({ situacao: novaSituacao })
+              .where(eq(solicitacao.id, vot.contestacao.solicitacaoOrigemId!));
+
+            await tx.insert(logSolicitacaoAnalisada).values({
+              atorTipo: "sistema",
+              solicitacaoId: vot.contestacao.solicitacaoOrigemId!,
+              decisao: `votacao_${apuracao.situacao}`,
+              justificativa: `Votação concluída: ${apuracao.aprovacoes} a favor, ${apuracao.rejeicoes} contra`,
+            });
+          } catch (e) {
+            if (!(e instanceof ErroTransicaoInvalida)) throw e;
+          }
+        }
+
+        // Aplicar resultado no negócio
+        if (apuracao.situacao === "aprovada") {
+          await tx
+            .update(negocio)
+            .set({ situacaoPublicacao: "publicado" })
+            .where(eq(negocio.id, vot.contestacao.negocioId));
+
+          await tx.insert(logNegocio).values({
+            atorTipo: "sistema",
+            negocioId: vot.contestacao.negocioId,
+            acao: "votacao_aprovada",
+            snapshotAntes: { situacaoPublicacao: "oculto_contestacao" },
+            snapshotDepois: { situacaoPublicacao: "publicado" },
+          });
+        } else {
+          await tx
+            .update(negocio)
+            .set({ situacaoPublicacao: "nao_publicado" })
+            .where(eq(negocio.id, vot.contestacao.negocioId));
+
+          await tx.insert(logNegocio).values({
+            atorTipo: "sistema",
+            negocioId: vot.contestacao.negocioId,
+            acao: "votacao_rejeitada_ou_empate",
+            snapshotAntes: { situacaoPublicacao: "oculto_contestacao" },
+            snapshotDepois: { situacaoPublicacao: "nao_publicado" },
+          });
+        }
+      }
+    });
+
+    revalidatePath(`/admin/solicitacoes`);
+    revalidatePath(`/admin/negocios/${vot.contestacao.negocioId}`);
+
+    return { success: true, resultado: apuracao.situacao };
+  } catch (e) {
+    if (e instanceof QuorumIncompleto) {
+      return { error: "Quórum incompleto: nem todos os admins ativos votaram" };
+    }
+    throw e;
+  }
+}
+
+const detalharVotacaoSchema = z.object({
+  votacaoId: z.string().uuid(),
+});
+
+export async function detalharVotacaoAction(
+  prevState: unknown,
+  formData: FormData,
+) {
+  const admin = await getAdmin();
+  if (!admin) return { error: "Não autorizado" };
+
+  const rawData = {
+    votacaoId: formData.get("votacaoId"),
+  };
+
+  const parseResult = detalharVotacaoSchema.safeParse(rawData);
+  if (!parseResult.success) {
+    return { error: "Dados inválidos" };
+  }
+
+  const { votacaoId } = parseResult.data;
+
+  const vot = await db.query.votacao.findFirst({
+    where: (v, { eq }) => eq(v.id, votacaoId),
+    with: {
+      contestacao: {
+        with: {
+          autor: { columns: { id: true, nome: true } },
+          negocio: true,
+          solicitacaoOrigem: true,
+        },
+      },
+      votos: {
+        with: {
+          admin: { columns: { id: true, nome: true } },
+        },
+        orderBy: (v, { asc }) => [asc(v.criadoEm)],
+      },
+    },
+  });
+
+  if (!vot) {
+    return { error: "Votação não encontrada" };
+  }
+
+  // Buscar admins ativos para mostrar quem ainda não votou
+  const adminsAtivos = await db.query.administrador.findMany({
+    where: (a, { eq }) => eq(a.ativo, true),
+    columns: { id: true, nome: true },
+  });
+
+  const votaram = new Set(vot.votos.map((v) => v.adminId));
+  const naoVotaram = adminsAtivos.filter((a) => !votaram.has(a.id));
+
+  return {
+    success: true,
+    votacao: vot,
+    adminsAtivos,
+    naoVotaram,
+  };
+}
