@@ -68,18 +68,11 @@ export async function listarSolicitacoesAction(
     db
       .select({
         id: solicitacao.id,
+        situacao: solicitacao.situacao,
+        tipo: solicitacao.tipo,
+        criadoEm: solicitacao.criadoEm,
         solicitanteId: solicitacao.solicitanteId,
         negocioId: solicitacao.negocioId,
-        tipo: solicitacao.tipo,
-        situacao: solicitacao.situacao,
-        origemDecisao: solicitacao.origemDecisao,
-        declaracaoVinculo: solicitacao.declaracaoVinculo,
-        duplicataDetectada: solicitacao.duplicataDetectada,
-        motivoIncompleta: solicitacao.motivoIncompleta,
-        analisadaEm: solicitacao.analisadaEm,
-        observacoesInternas: solicitacao.observacoesInternas,
-        criadoEm: solicitacao.criadoEm,
-        atualizadoEm: solicitacao.atualizadoEm,
       })
       .from(solicitacao)
       .where(whereClause)
