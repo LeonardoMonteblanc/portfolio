@@ -21,15 +21,26 @@ export async function getAdmin(): Promise<{
   nome: string;
   email: string;
 } | null> {
-  const adminId = await getAdminId();
-  if (!adminId) return null;
+  const token = await getToken();
+  if (!token) return null;
+
+  const payload = await validarJWT(token);
+  if (!payload) return null;
+
+  const adminId = payload.adminId;
 
   const admin = await db.query.administrador.findFirst({
     where: eq(administrador.id, adminId),
-    columns: { id: true, nome: true, email: true, ativo: true },
+    columns: {
+      id: true,
+      nome: true,
+      email: true,
+      ativo: true,
+      tokenVersion: true,
+    },
   });
 
-  if (!admin || !admin.ativo) return null;
+  if (!admin || !admin.ativo || admin.tokenVersion !== payload.tv) return null;
 
   return { id: admin.id, nome: admin.nome, email: admin.email };
 }

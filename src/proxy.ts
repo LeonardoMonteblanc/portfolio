@@ -12,11 +12,7 @@ export async function proxy(request: NextRequest) {
   if (isAdminRoute) {
     const token = request.cookies.get("auth_token")?.value;
 
-    console.log("[PROXY] Token present:", !!token);
-    console.log("[PROXY] Pathname:", pathname);
-
     if (!token) {
-      console.log("[PROXY] No token, redirecting to login");
       const loginUrl = new URL("/login", request.url);
       loginUrl.searchParams.set("redirect", pathname);
       return NextResponse.redirect(loginUrl);
@@ -24,10 +20,7 @@ export async function proxy(request: NextRequest) {
 
     const payload = await validarJWT(token);
 
-    console.log("[PROXY] JWT payload:", payload);
-
     if (!payload) {
-      console.log("[PROXY] JWT validation failed, redirecting to login");
       const loginUrl = new URL("/login", request.url);
       loginUrl.searchParams.set("redirect", pathname);
       const response = NextResponse.redirect(loginUrl);
@@ -35,38 +28,10 @@ export async function proxy(request: NextRequest) {
       return response;
     }
 
-    // Verificar se admin ainda está ativo e token_version confere
-    const { db } = await import("@/infrastructure/db/client");
-    const { administrador } =
-      await import("@/infrastructure/db/schema/administrador");
-    const { eq } = await import("drizzle-orm");
-
-    console.log("[PROXY] Querying admin with ID:", payload.adminId);
-
-    const admin = await db.query.administrador.findFirst({
-      where: eq(administrador.id, payload.adminId),
-      columns: { ativo: true, tokenVersion: true },
-    });
-
-    console.log("[PROXY] Admin found:", admin);
-    console.log("[PROXY] Admin ativo:", admin?.ativo);
-    console.log("[PROXY] Admin tokenVersion:", admin?.tokenVersion);
-    console.log("[PROXY] Payload tv:", payload.tv);
-    console.log(
-      "[PROXY] tokenVersion !== payload.tv:",
-      admin?.tokenVersion !== payload.tv,
-    );
-
-    if (!admin || !admin.ativo || admin.tokenVersion !== payload.tv) {
-      console.log("[PROXY] Admin check failed, redirecting to login");
-      const loginUrl = new URL("/login", request.url);
-      loginUrl.searchParams.set("redirect", pathname);
-      const response = NextResponse.redirect(loginUrl);
-      response.cookies.delete("auth_token");
-      return response;
-    }
-
-    console.log("[PROXY] Admin check passed, allowing request");
+    // NOTA: A verificação de admin ativo e tokenVersion foi movida para os
+    // Server Components das páginas de admin (ex: /admin/solicitacoes/page.tsx)
+    // para evitar problemas de conexão com banco no middleware/edge runtime.
+    // O middleware aqui apenas valida a assinatura e expiração do JWT.
   }
 
   return NextResponse.next();
