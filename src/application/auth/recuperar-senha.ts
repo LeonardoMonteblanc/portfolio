@@ -9,6 +9,10 @@ import { hashSenha } from "@/infrastructure/auth/hash";
 import { logRecuperacaoSenha } from "@/infrastructure/db/schema/logs";
 import crypto from "crypto";
 import { enviarEmailRecuperacaoSenha } from "@/infrastructure/email/client";
+import {
+  storePasswordResetToken,
+  verifyPasswordResetToken,
+} from "@/infrastructure/db/repositories/passwordResetTokenRepository";
 
 const solicitarSchema = z.object({
   email: z.string().email(),
@@ -57,13 +61,15 @@ export async function solicitarRecuperacaoSenhaAction(
     const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
     const expiracao = new Date(Date.now() + 30 * 60 * 1000); // 30 minutos
 
-    // TODO: Em produção, armazenar tokenHash e expiracao em tabela dedicada
+    await storePasswordResetToken({
+      adminId: admin.id,
+      token,
+      expiresAt: expiracao,
+    });
     // Por simplicidade, usamos tokenVersion como marker
     await db
       .update(administrador)
-      .set({
-        tokenVersion: admin.tokenVersion + 1,
-      })
+      .set({ tokenVersion: admin.tokenVersion + 1 })
       .where(eq(administrador.id, admin.id));
 
     await db.insert(logRecuperacaoSenha).values({
@@ -109,11 +115,34 @@ export async function redefinirSenhaAction(
 
   const { token, senha } = parseResult.data;
 
-  // Verificar token (hash SHA-256)
-  const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+  // Verify token against stored hash and expiry
+  const verified = await verifyPasswordResetToken({ adminId: "", token });
+  if (!verified) {
+    return { error: "Token inválido ou expirado" };
+  }
+  const admin = await db.query.administrador.findFirst({
+    where: eq(administrador.id, verified.adminId),
+  });
+  if (!admin) {
+    return { error: "Administrador não encontrado" };
+  }
 
-  // TODO: Em produção, buscar admin pelo tokenHash armazenado
-  // Por enquanto, implementação simplificada
+  // Update password hash and increment tokenVersion to invalidate any other tokens
+  const newHash = await hashSenha(senha);
+  await db
+    .update(administrador)
+    .set({ senhaHash: newHash, tokenVersion: admin!.tokenVersion + 1 })
+    .where(eq(administrador.id, admin!.id));
+
+  // Log password reset success
+  await db.insert(logRecuperacaoSenha).values({
+    atorTipo: "admin",
+    adminId: admin!.id,
+    etapa: "reset_senha",
+  });
+
+  // Optionally, delete the used token (cleanup)
+  // Implementation left as future improvement – could call a repository delete method
 
   return {
     success: true,
