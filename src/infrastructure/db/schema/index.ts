@@ -18,4 +18,4 @@ export * from "./voto";
 export * from "./imagem";
 export * from "./anexo";
 export * from "./logs";
-export { healthCheck } from "./health-check";
+export * from "./password_reset_tokens";

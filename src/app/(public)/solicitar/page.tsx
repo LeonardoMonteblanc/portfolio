@@ -24,6 +24,7 @@ import {
   CardTitle,
 } from "@/ui/components/card";
 import { Alert, AlertDescription, AlertTitle } from "@/ui/components/alert";
+import { ImageUpload, FileUpload } from "@/ui/components/image-upload";
 import { CheckCircle, AlertCircle, Loader2 } from "lucide-react";
 import Link from "next/link";
 
@@ -106,6 +107,29 @@ export default function SolicitarPage() {
   const [aceiteTermos, setAceiteTermos] = useState(false);
   const [termos, setTermos] = useState<
     Array<{ tipo: string; versao: string; conteudo: string }>
+  >([]);
+
+  // Imagens e anexos
+  const [imagens, setImagens] = useState<
+    Array<{
+      key: string;
+      url: string;
+      fileName: string;
+      fileType: string;
+      fileSize: number;
+      preview?: string;
+      tipo: "logo" | "foto";
+    }>
+  >([]);
+  const [anexos, setAnexos] = useState<
+    Array<{
+      key: string;
+      url: string;
+      fileName: string;
+      fileType: string;
+      fileSize: number;
+      nomeOriginal: string;
+    }>
   >([]);
 
   async function carregarCategorias() {
@@ -196,6 +220,12 @@ export default function SolicitarPage() {
       formData.append("horarios", JSON.stringify(horarios));
     formData.append("declaracaoVinculo", "Declaro ter vínculo com o negócio");
     formData.append("aceiteTermos", "true");
+    if (imagens.length > 0) {
+      formData.append("imagens", JSON.stringify(imagens));
+    }
+    if (anexos.length > 0) {
+      formData.append("anexos", JSON.stringify(anexos));
+    }
 
     fetch("/api/solicitacoes", {
       method: "POST",
@@ -693,6 +723,33 @@ export default function SolicitarPage() {
                       </Button>
                     </div>
                   ))}
+                </div>
+
+                {/* Imagens do negócio */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <Label>Imagens do negócio (opcional)</Label>
+                    <span className="text-sm text-gray-500">
+                      Máx 5 imagens (logo + fotos)
+                    </span>
+                  </div>
+                  <ImageUpload
+                    tipo="foto"
+                    maxFiles={5}
+                    solicitacaoId=""
+                    onUploadComplete={setImagens}
+                  />
+                </div>
+
+                {/* Anexos (documentos) */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <Label>Anexos / Documentos (opcional)</Label>
+                    <span className="text-sm text-gray-500">
+                      PDF, DOC, DOCX - máx 10MB cada
+                    </span>
+                  </div>
+                  <FileUpload solicitacaoId="" onUploadComplete={setAnexos} />
                 </div>
 
                 <div className="space-y-4">

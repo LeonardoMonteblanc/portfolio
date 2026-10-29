@@ -1,6 +1,8 @@
 import crypto from "crypto";
-import { db } from "../client";
+import { passwordResetToken } from "../schema/password_reset_tokens";
 import { sql } from "drizzle-orm";
+
+import { db } from "../client";
 
 /**
  * Insert a new password‑reset token row.
@@ -16,7 +18,7 @@ export async function storePasswordResetToken({
   expiresAt: Date;
 }) {
   const hash = crypto.createHash("sha256").update(token).digest("hex");
-  const [row] = await db
+  const [row] = await (db as any)
     .insert(passwordResetToken)
     .values({ adminId, hash, expiresAt })
     .returning({
@@ -34,15 +36,16 @@ export async function verifyPasswordResetToken({
   adminId,
   token,
 }: {
-  adminId: string;
+  adminId?: string;
   token: string;
 }) {
   const hash = crypto.createHash("sha256").update(token).digest("hex");
   const now = new Date();
-  const row = await db.query.passwordResetToken.findFirst({
-    where: (t, { eq, and }) =>
+  const row = await (db as any).query.passwordResetToken.findFirst({
+    where: (t: any, { eq, and }: any) =>
       and(
-        eq(t.adminId, adminId),
+        // adminId filter is optional – if provided, match it
+        adminId ? eq(t.adminId, adminId) : true,
         eq(t.hash, hash),
         sql`${t.expiresAt} > ${now}`,
       ),

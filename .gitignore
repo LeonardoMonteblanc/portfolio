@@ -35,7 +35,7 @@ yarn-error.log*
 .env.production
 .env.local
 .env.example
-
+tasks/
 
 # vercel
 .vercel
