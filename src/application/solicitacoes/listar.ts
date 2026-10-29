@@ -63,9 +63,17 @@ export async function listarSolicitacoesAction(
     whereConditions.length > 0 ? and(...whereConditions) : undefined;
 
   const [solicitacoes, totalResult] = await Promise.all([
-    db.execute(
-      sql`SELECT id, situacao, tipo, criado_em FROM solicitacao ORDER BY criado_em DESC LIMIT ${porPagina} OFFSET ${(pagina - 1) * porPagina}`,
-    ),
+    db.execute(sql`
+      SELECT 
+        id, solicitante_id, negocio_id, tipo, situacao, origem_decisao,
+        declaracao_vinculo, dados_negocio_proposto, duplicata_detectada,
+        motivo_incompleta, analisada_em, observacoes_internas,
+        criado_em, atualizado_em
+      FROM solicitacao
+      ${whereClause ? sql`WHERE ${whereClause}` : sql``}
+      ORDER BY criado_em DESC
+      LIMIT ${porPagina} OFFSET ${(pagina - 1) * porPagina}
+    `),
     db
       .select({ count: sql<number>`count(*)` })
       .from(solicitacao)
