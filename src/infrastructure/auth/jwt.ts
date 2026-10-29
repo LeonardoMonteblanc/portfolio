@@ -3,9 +3,9 @@ import { SignJWT, jwtVerify } from "jose";
 import { env } from "@/shared/env";
 import { Administrador } from "@/domain/entities/administrador";
 
-const JWT_SECRET = new TextEncoder().encode(env.JWT_SECRET);
-const JWT_ISSUER = "diretorio-comunitario";
-const JWT_AUDIENCE = "painel-admin";
+export const JWT_SECRET = new TextEncoder().encode(env.JWT_SECRET);
+export const JWT_ISSUER = "diretorio-comunitario";
+export const JWT_AUDIENCE = "painel-admin";
 
 export interface JWTPayload {
   adminId: string;

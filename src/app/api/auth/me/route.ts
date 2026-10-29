@@ -1,10 +1,16 @@
 // src/app/api/auth/me/route.ts
 import { cookies } from "next/headers";
-import { validarJWT } from "@/infrastructure/auth/jwt";
+import {
+  validarJWT,
+  JWT_SECRET,
+  JWT_ISSUER,
+  JWT_AUDIENCE,
+} from "@/infrastructure/auth/jwt";
 import { db } from "@/infrastructure/db/client";
 import { administrador } from "@/infrastructure/db/schema/administrador";
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
+import { jwtVerify } from "jose";
 
 export async function GET() {
   const cookieStore = await cookies();
@@ -17,11 +23,32 @@ export async function GET() {
     );
   }
 
-  const payload = await validarJWT(token);
-
-  if (!payload) {
+  // Test jwtVerify directly with detailed error
+  let payload: any;
+  try {
+    const result = await jwtVerify(token, JWT_SECRET, {
+      issuer: JWT_ISSUER,
+      audience: JWT_AUDIENCE,
+    });
+    payload = result.payload;
+  } catch (e: any) {
     return NextResponse.json(
-      { error: "Invalid JWT", step: "jwt" },
+      {
+        error: "JWT verify failed",
+        step: "jwtVerify",
+        message: e.message,
+        code: e.code,
+        jwtSecretLength: JWT_SECRET.length,
+        issuer: JWT_ISSUER,
+        audience: JWT_AUDIENCE,
+      },
+      { status: 401 },
+    );
+  }
+
+  if (typeof payload.adminId !== "string" || typeof payload.tv !== "number") {
+    return NextResponse.json(
+      { error: "Invalid payload types", step: "payload", payload },
       { status: 401 },
     );
   }
