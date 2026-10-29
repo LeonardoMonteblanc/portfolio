@@ -3,13 +3,7 @@ import { listarSolicitacoesAction } from "@/application/solicitacoes/listar";
 import { Button } from "@/ui/components/button";
 import { Input } from "@/ui/components/input";
 import { Label } from "@/ui/components/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/ui/components/select";
+import { NativeSelect } from "@/ui/components/native-select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/ui/components/card";
 import {
   Table,
@@ -138,35 +132,29 @@ export default async function SolicitacoesPage({
             </div>
             <div className="space-y-2">
               <Label htmlFor="situacao">Situação</Label>
-              <Select value={situacao || ""} onValueChange={(v) => {}}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Todas" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">Todas</SelectItem>
-                  {SITUACOES.map((s) => (
-                    <SelectItem key={s.value} value={s.value}>
-                      {s.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <NativeSelect
+                id="situacao"
+                name="situacao"
+                value={situacao || ""}
+              >
+                <option value="">Todas</option>
+                {SITUACOES.map((s) => (
+                  <option key={s.value} value={s.value}>
+                    {s.label}
+                  </option>
+                ))}
+              </NativeSelect>
             </div>
             <div className="space-y-2">
               <Label htmlFor="tipo">Tipo</Label>
-              <Select value={tipo || ""} onValueChange={(v) => {}}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Todos" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">Todos</SelectItem>
-                  {TIPOS.map((t) => (
-                    <SelectItem key={t.value} value={t.value}>
-                      {t.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <NativeSelect id="tipo" name="tipo" value={tipo || ""}>
+                <option value="">Todos</option>
+                {TIPOS.map((t) => (
+                  <option key={t.value} value={t.value}>
+                    {t.label}
+                  </option>
+                ))}
+              </NativeSelect>
             </div>
             <Button type="submit">
               <Filter className="h-4 w-4 mr-2" />
@@ -256,39 +244,38 @@ export default async function SolicitacoesPage({
               </TableBody>
             </Table>
           </div>
-
-          {totalPaginas > 1 && (
-            <div className="flex items-center justify-between p-4 border-t">
-              <p className="text-sm text-gray-600">
-                Mostrando {(currentPagina - 1) * porPagina + 1} a{" "}
-                {Math.min(currentPagina * porPagina, total)} de {total}{" "}
-                resultados
-              </p>
-              <div className="flex gap-2">
-                {currentPagina > 1 && (
-                  <Link
-                    href={`/admin/solicitacoes?pagina=${currentPagina - 1}${situacao ? `&situacao=${situacao}` : ""}${tipo ? `&tipo=${tipo}` : ""}${busca ? `&busca=${busca}` : ""}`}
-                  >
-                    <Button variant="outline" size="sm">
-                      <ChevronLeft className="h-4 w-4 mr-1" />
-                      Anterior
-                    </Button>
-                  </Link>
-                )}
-                {currentPagina < totalPaginas && (
-                  <Link
-                    href={`/admin/solicitacoes?pagina=${currentPagina + 1}${situacao ? `&situacao=${situacao}` : ""}${tipo ? `&tipo=${tipo}` : ""}${busca ? `&busca=${busca}` : ""}`}
-                  >
-                    <Button variant="outline" size="sm">
-                      Próxima
-                      <ChevronRight className="h-4 w-4 ml-1" />
-                    </Button>
-                  </Link>
-                )}
-              </div>
-            </div>
-          )}
         </CardContent>
+
+        {totalPaginas > 1 && (
+          <div className="flex items-center justify-between p-4 border-t">
+            <p className="text-sm text-gray-600">
+              Mostrando {(currentPagina - 1) * porPagina + 1} a{" "}
+              {Math.min(currentPagina * porPagina, total)} de {total} resultados
+            </p>
+            <div className="flex gap-2">
+              {currentPagina > 1 && (
+                <Link
+                  href={`/admin/solicitacoes?pagina=${currentPagina - 1}${situacao ? `&situacao=${situacao}` : ""}${tipo ? `&tipo=${tipo}` : ""}${busca ? `&busca=${busca}` : ""}`}
+                >
+                  <Button variant="outline" size="sm">
+                    <ChevronLeft className="h-4 w-4 mr-1" />
+                    Anterior
+                  </Button>
+                </Link>
+              )}
+              {currentPagina < totalPaginas && (
+                <Link
+                  href={`/admin/solicitacoes?pagina=${currentPagina + 1}${situacao ? `&situacao=${situacao}` : ""}${tipo ? `&tipo=${tipo}` : ""}${busca ? `&busca=${busca}` : ""}`}
+                >
+                  <Button variant="outline" size="sm">
+                    Próxima
+                    <ChevronRight className="h-4 w-4 ml-1" />
+                  </Button>
+                </Link>
+              )}
+            </div>
+          </div>
+        )}
       </Card>
     </div>
   );
