@@ -74,7 +74,7 @@ export async function listarSolicitacoesAction(
       FROM solicitacao
       ${whereSql}
       ORDER BY criado_em DESC
-      LIMIT ${porPagina} OFFSET ${(pagina - 1) * porPagina}
+      LIMIT 20 OFFSET 0
     `),
     db
       .select({ count: sql<number>`count(*)` })
