@@ -3,19 +3,11 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { validarJWT } from "@/infrastructure/auth/jwt";
 
-const ROTAS_PUBLICAS = ["/login", "/recuperar-senha", "/api/webhooks"];
-const ROTAS_ADMIN = ["/admin"];
-
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Permitir rotas públicas
-  if (ROTAS_PUBLICAS.some((rota) => pathname.startsWith(rota))) {
-    return NextResponse.next();
-  }
-
   // Verificar se é rota admin
-  const isAdminRoute = ROTAS_ADMIN.some((rota) => pathname.startsWith(rota));
+  const isAdminRoute = pathname.startsWith("/admin");
 
   if (isAdminRoute) {
     const token = request.cookies.get("auth_token")?.value;
@@ -60,5 +52,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin/:path*", "/login", "/recuperar-senha"],
+  matcher: ["/admin/:path*"],
 };
