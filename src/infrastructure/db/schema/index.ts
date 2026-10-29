@@ -1,7 +1,19 @@
-import { pgTable, uuid, varchar, timestamp } from 'drizzle-orm/pg-core';
-
-export const healthCheck = pgTable('health_check', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  status: varchar('status', { length: 50 }).notNull(),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-});
+// src/infrastructure/db/schema/index.ts
+export * from "./administrador";
+export * from "./categoria";
+export * from "./negocio";
+export * from "./negocio-categoria";
+export * from "./contato";
+export * from "./localizacao";
+export * from "./horario-funcionamento";
+export * from "./solicitante";
+export * from "./solicitacao";
+export * from "./sugestao-categoria";
+export * from "./documento-termo";
+export * from "./aceite-termo";
+export * from "./forum-publicacao";
+export * from "./contestacao";
+export * from "./votacao";
+export * from "./voto";
+export * from "./logs";
+export { healthCheck } from "./health-check";

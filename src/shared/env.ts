@@ -1,7 +1,9 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 const envSchema = z.object({
-  NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+  NODE_ENV: z
+    .enum(["development", "test", "production"])
+    .default("development"),
   DATABASE_URL: z.string().url(),
   JWT_SECRET: z.string().min(32),
   RESEND_API_KEY: z.string().min(1),
@@ -13,7 +15,7 @@ const envSchema = z.object({
   R2_PUBLIC_URL: z.string().url(),
   UPSTASH_REDIS_URL: z.string().url(),
   UPSTASH_REDIS_TOKEN: z.string().min(1),
-  SENTRY_DSN: z.string().url().optional(),
+  SENTRY_DSN: z.string().url().optional().or(z.literal("")),
   ADMIN_EMAIL_INSTITUCIONAL: z.string().email().optional(),
   ADMIN_EMAIL_DPO: z.string().email().optional(),
 });
