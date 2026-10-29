@@ -63,13 +63,10 @@ export async function listarSolicitacoesAction(
     whereConditions.length > 0 ? and(...whereConditions) : undefined;
 
   const [solicitacoes, totalResult] = await Promise.all([
-    db.query.solicitacao.findMany({
-      where: whereClause,
-      // with: { solicitante: true } temporariamente removido para debug
-      orderBy: (s, { desc }) => desc(s.criadoEm),
-      limit: porPagina,
-      offset: (pagina - 1) * porPagina,
-    }),
+    db
+      .select({ count: sql<number>`count(*)` })
+      .from(solicitacao)
+      .where(whereClause),
     db
       .select({ count: sql<number>`count(*)` })
       .from(solicitacao)
