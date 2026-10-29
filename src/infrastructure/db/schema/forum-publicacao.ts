@@ -19,6 +19,7 @@ export const forumPublicacao = pgTable("forum_publicacao", {
     .notNull()
     .references(() => administrador.id),
   autorTipo: varchar("autor_tipo", { length: 20 }).notNull(), // 'admin' | 'sistema'
+  tipo: varchar("tipo", { length: 20 }).notNull().default("comentario"), // 'comentario' | 'concordancia' | 'discordancia'
   conteudo: text("conteudo").notNull(),
   comentarioPaiId: uuid("comentario_pai_id"),
   editada: boolean("editada").notNull().default(false),

@@ -19,6 +19,7 @@ export const solicitacao = pgTable("solicitacao", {
   negocioId: uuid("negocio_id").references(() => negocio.id),
   tipo: varchar("tipo", { length: 20 }).notNull(), // 'inclusao' | 'atualizacao'
   situacao: varchar("situacao", { length: 40 }).notNull().default("recebida"),
+  origemDecisao: varchar("origem_decisao", { length: 20 }), // 'individual' | 'votacao'
   declaracaoVinculo: text("declaracao_vinculo").notNull(),
   dadosNegocioProposto: jsonb("dados_negocio_proposto").notNull(),
   duplicataDetectada: boolean("duplicata_detectada").notNull().default(false),

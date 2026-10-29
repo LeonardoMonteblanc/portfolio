@@ -3,6 +3,14 @@ import {
   buscarSolicitacaoPorIdAction,
   analisarSolicitacaoAction,
 } from "@/application/solicitacoes";
+import {
+  criarForumPublicacaoAction,
+  listarForumPublicacoesAction,
+} from "@/application/governanca/forum";
+import {
+  abrirContestacaoAction,
+  listarContestacoesAction,
+} from "@/application/governanca/contestacao";
 import { Button } from "@/ui/components/button";
 import {
   Card,
@@ -23,6 +31,7 @@ import {
 } from "@/ui/components/select";
 import { Badge } from "@/ui/components/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/ui/components/alert";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/ui/components/tabs";
 import {
   AlertCircle,
   CheckCircle,
@@ -32,6 +41,15 @@ import {
   Clock,
   Building2,
   FileText,
+  MessageSquare,
+  Gavel,
+  Vote,
+  Users,
+  Plus,
+  Send,
+  Check,
+  X,
+  AlertTriangle,
 } from "lucide-react";
 import Link from "next/link";
 import { revalidatePath } from "next/cache";
@@ -459,8 +477,326 @@ export default async function SolicitacaoDetailPage({
               )}
             </CardContent>
           </Card>
+
+          {sol.negocioId && (
+            <Tabs defaultValue="forum" className="space-y-4">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="forum">
+                  <MessageSquare className="h-4 w-4 mr-2" />
+                  Fórum
+                </TabsTrigger>
+                <TabsTrigger value="contestacao">
+                  <Gavel className="h-4 w-4 mr-2" />
+                  Contestação
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="forum">
+                <ForumTab solicitacaoId={sol.id} negocioId={sol.negocioId} />
+              </TabsContent>
+
+              <TabsContent value="contestacao">
+                <ContestacaoTab
+                  solicitacaoId={sol.id}
+                  negocioId={sol.negocioId}
+                />
+              </TabsContent>
+            </Tabs>
+          )}
         </div>
       </div>
     </div>
   );
+}
+
+// Forum Tab Component
+async function ForumTab({
+  solicitacaoId,
+  negocioId,
+}: {
+  solicitacaoId: string;
+  negocioId: string;
+}) {
+  const formData = new FormData();
+  formData.append("negocioId", negocioId);
+  const result = await listarForumPublicacoesAction(null, formData);
+
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <MessageSquare className="h-5 w-5" />
+              Discussão do Fórum
+            </CardTitle>
+            <CardDescription>
+              Comentários, concordâncias e discordâncias
+            </CardDescription>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Formulário para nova publicação */}
+          <form
+            action={async (formData: FormData) => {
+              "use server";
+              formData.append("negocioId", negocioId);
+              const result = await criarForumPublicacaoAction(null, formData);
+              if (!("error" in result)) {
+                revalidatePath(`/admin/solicitacoes/${solicitacaoId}`);
+              }
+            }}
+            className="space-y-3"
+          >
+            <div className="space-y-2">
+              <Label htmlFor="forum-conteudo">Nova publicação</Label>
+              <Textarea
+                name="conteudo"
+                id="forum-conteudo"
+                rows={3}
+                placeholder="Digite seu comentário, concordância ou discordância..."
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="forum-tipo">Tipo</Label>
+              <Select name="tipo">
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="comentario">Comentário</SelectItem>
+                  <SelectItem value="concordancia">Concordância</SelectItem>
+                  <SelectItem value="discordancia">Discordância</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <Button type="submit">
+              <Send className="h-4 w-4 mr-2" />
+              Publicar
+            </Button>
+          </form>
+
+          {/* Lista de publicações */}
+          <div className="space-y-3">
+            {"success" in result &&
+            result.success &&
+            result.publicacoes &&
+            result.publicacoes.length > 0 ? (
+              result.publicacoes.map((pub: any) => (
+                <div key={pub.id} className="border rounded-lg p-4 bg-gray-50">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="font-medium">
+                          {pub.autor?.nome || "Admin"}
+                        </span>
+                        <Badge
+                          variant={
+                            pub.tipo === "concordancia"
+                              ? "default"
+                              : pub.tipo === "discordancia"
+                                ? "destructive"
+                                : "secondary"
+                          }
+                        >
+                          {pub.tipo}
+                        </Badge>
+                        <span className="text-sm text-gray-500">
+                          {new Date(pub.criadaEm).toLocaleString("pt-BR")}
+                        </span>
+                      </div>
+                      <p className="whitespace-pre-wrap">{pub.conteudo}</p>
+                      {pub.comentarioPaiId && (
+                        <p className="text-xs text-gray-500 mt-1">
+                          Resposta a comentário
+                        </p>
+                      )}
+                    </div>
+                    {pub.editada && (
+                      <span className="text-xs text-gray-400">(editada)</span>
+                    )}
+                  </div>
+                </div>
+              ))
+            ) : (
+              <p className="text-gray-500 text-center py-8">
+                Nenhuma publicação no fórum ainda.
+              </p>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// Contestacao Tab Component
+async function ContestacaoTab({
+  solicitacaoId,
+  negocioId,
+}: {
+  solicitacaoId: string;
+  negocioId: string;
+}) {
+  const formData = new FormData();
+  formData.append("negocioId", negocioId);
+  const result = await listarContestacoesAction(null, formData);
+
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <Gavel className="h-5 w-5" />
+              Contestações
+            </CardTitle>
+            <CardDescription>
+              Contestações formais que podem iniciar votação
+            </CardDescription>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Formulário para nova contestação */}
+          <form
+            action={async (formData: FormData) => {
+              "use server";
+              formData.append("negocioId", negocioId);
+              formData.append("solicitacaoId", solicitacaoId);
+              const result = await abrirContestacaoAction(null, formData);
+              if (!("error" in result)) {
+                revalidatePath(`/admin/solicitacoes/${solicitacaoId}`);
+              }
+            }}
+            className="space-y-3"
+          >
+            <div className="space-y-2">
+              <Label htmlFor="contestacao-fundamentacao">Fundamentação</Label>
+              <Textarea
+                name="fundamentacao"
+                id="contestacao-fundamentacao"
+                rows={4}
+                placeholder="Explique os motivos da contestação..."
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="contestacao-tipo">Tipo</Label>
+              <Select name="tipo">
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="oficial">
+                    Contestação Oficial (abre votação)
+                  </SelectItem>
+                  <SelectItem value="manifesta">
+                    Manifestação (apenas registro)
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <Button type="submit">
+              <Plus className="h-4 w-4 mr-2" />
+              Registrar Contestação
+            </Button>
+          </form>
+
+          {/* Lista de contestações */}
+          <div className="space-y-3">
+            {"success" in result &&
+            result.success &&
+            result.contestacoes &&
+            result.contestacoes.length > 0 ? (
+              result.contestacoes.map((cont: any) => (
+                <div key={cont.id} className="border rounded-lg p-4 bg-gray-50">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="font-medium">
+                          {cont.autor?.nome || "Admin"}
+                        </span>
+                        <Badge
+                          variant={
+                            cont.tipo === "oficial"
+                              ? "destructive"
+                              : "secondary"
+                          }
+                        >
+                          {cont.tipo === "oficial" ? "Oficial" : "Manifestação"}
+                        </Badge>
+                        <Badge
+                          variant={getSituacaoContestacaoVariant(cont.situacao)}
+                        >
+                          {getSituacaoContestacaoLabel(cont.situacao)}
+                        </Badge>
+                        <span className="text-sm text-gray-500">
+                          {new Date(cont.criadaEm).toLocaleString("pt-BR")}
+                        </span>
+                      </div>
+                      <p className="whitespace-pre-wrap">
+                        {cont.fundamentacao}
+                      </p>
+                      {cont.votacao && (
+                        <div className="mt-2 p-2 bg-blue-50 rounded">
+                          <p className="text-sm text-blue-800">
+                            <Vote className="h-4 w-4 inline mr-1" />
+                            Votação:{" "}
+                            <span className="font-medium">
+                              {getSituacaoVotacaoLabel(cont.votacao.situacao)}
+                            </span>
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <p className="text-gray-500 text-center py-8">
+                Nenhuma contestação registrada.
+              </p>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// Helper functions
+function getSituacaoContestacaoLabel(situacao: string): string {
+  const labels: Record<string, string> = {
+    aberta: "Aberta",
+    em_votacao: "Em Votação",
+    encerrada: "Encerrada",
+  };
+  return labels[situacao] || situacao;
+}
+
+function getSituacaoContestacaoVariant(
+  situacao: string,
+): "default" | "secondary" | "destructive" | "outline" {
+  const variants: Record<
+    string,
+    "default" | "secondary" | "destructive" | "outline"
+  > = {
+    aberta: "default",
+    em_votacao: "secondary",
+    encerrada: "outline",
+  };
+  return variants[situacao] || "default";
+}
+
+function getSituacaoVotacaoLabel(situacao: string): string {
+  const labels: Record<string, string> = {
+    aberta: "Aberta",
+    encerrada: "Encerrada",
+    cancelada: "Cancelada",
+    aprovada: "Aprovada",
+    rejeitada: "Rejeitada",
+    sem_aprovacao: "Sem Aprovação (Empate)",
+  };
+  return labels[situacao] || situacao;
 }
