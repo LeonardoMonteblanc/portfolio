@@ -1,8 +1,5 @@
 // src/app/(admin)/solicitacoes/[id]/page.tsx
-import {
-  buscarSolicitacaoPorIdAction,
-  analisarSolicitacaoAction,
-} from "@/application/solicitacoes";
+import { buscarSolicitacaoPorIdAction } from "@/application/solicitacoes";
 import {
   criarForumPublicacaoAction,
   listarForumPublicacoesAction,
@@ -47,6 +44,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { revalidatePath } from "next/cache";
+import { AcaoForm } from "./_components/acao-form";
 
 interface DadosNegocioProposto {
   nome?: string;
@@ -375,75 +373,8 @@ export default async function SolicitacaoDetailPage({
                 Analisar e decidir sobre a solicitação
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <form
-                action={async (formData: FormData) => {
-                  "use server";
-                  const result = await analisarSolicitacaoAction(
-                    null,
-                    formData,
-                  );
-                  if (!("error" in result)) {
-                    revalidatePath("/admin/solicitacoes");
-                    revalidatePath(`/admin/solicitacoes/${id}`);
-                  }
-                }}
-              >
-                <input type="hidden" name="solicitacaoId" value={sol.id} />
-
-                <div className="space-y-2">
-                  <Label htmlFor="decisao">Decisão</Label>
-                  <NativeSelect name="decisao" id="decisao" required value="">
-                    <option value="">Selecione uma ação</option>
-                    {sol.situacao === "recebida" ||
-                    sol.situacao === "em_fila_contestacao" ? (
-                      DECISAO_OPTIONS.map((opt) => (
-                        <option key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </option>
-                      ))
-                    ) : (
-                      <option value="" disabled>
-                        Já analisada
-                      </option>
-                    )}
-                  </NativeSelect>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="justificativa">
-                    Justificativa (obrigatória para reprovar/solicitar correção)
-                  </Label>
-                  <Textarea
-                    name="justificativa"
-                    id="justificativa"
-                    rows={3}
-                    placeholder="Explique o motivo da decisão..."
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="observacoesInternas">
-                    Observações Internas (opcional)
-                  </Label>
-                  <Textarea
-                    name="observacoesInternas"
-                    id="observacoesInternas"
-                    rows={2}
-                    placeholder="Notas internas para a equipe..."
-                  />
-                </div>
-
-                <Button
-                  type="submit"
-                  disabled={
-                    sol.situacao !== "recebida" &&
-                    sol.situacao !== "em_fila_contestacao"
-                  }
-                >
-                  Executar Ação
-                </Button>
-              </form>
+            <CardContent>
+              <AcaoForm solicitacaoId={sol.id} situacao={sol.situacao} />
             </CardContent>
           </Card>
 
