@@ -21,6 +21,8 @@ import {
 } from "@/infrastructure/db/schema/logs";
 import { enviarEmailAnaliseSolicitacao } from "@/infrastructure/email/client";
 import { revalidatePath } from "next/cache";
+import { normalizarSlug } from "@/domain/utils/normalizar-slug";
+import { gerarSlugUnico } from "@/domain/utils/gerar-slug-unico";
 
 const analisarSolicitacaoSchema = z.object({
   solicitacaoId: z.string().uuid(),
@@ -74,17 +76,21 @@ export async function analisarSolicitacaoAction(
       // Criar negócio a partir dos dados propostos
       const dados = sol.dadosNegocioProposto as Record<string, unknown>;
 
+      // Gerar slug único
+      const baseSlug = dados.nome
+        ? normalizarSlug(dados.nome as string)
+        : "sem-nome";
+      const existentes = new Set(
+        (await tx.select({ slug: negocio.slug }).from(negocio)).map(
+          (n) => n.slug,
+        ),
+      );
+      const slugUnico = gerarSlugUnico(baseSlug, existentes);
+
       const [novoNegocio] = await tx
         .insert(negocio)
         .values({
-          slug: dados.nome
-            ? (dados.nome as string)
-                .toLowerCase()
-                .normalize("NFD")
-                .replace(/[\u0300-\u036f]/g, "")
-                .replace(/[^a-z0-9]+/g, "-")
-                .replace(/^-+|-+$/g, "")
-            : "sem-nome",
+          slug: slugUnico,
           nome: dados.nome as string,
           descricao: dados.descricao as string,
           situacaoPublicacao: "publicado",
