@@ -1,6 +1,8 @@
 // src/app/api/auth/login/route.ts
 import { loginAction } from "@/application/auth/login";
 import { NextRequest, NextResponse } from "next/server";
+import { JWT_SECRET } from "@/infrastructure/auth/jwt";
+import { createHash } from "crypto";
 
 export async function POST(request: NextRequest) {
   const contentType = request.headers.get("content-type") || "";
@@ -27,9 +29,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: result.error }, { status: 401 });
   }
 
+  const secretHash = createHash("sha256")
+    .update(Buffer.from(JWT_SECRET))
+    .digest("hex")
+    .slice(0, 16);
+
   const response = NextResponse.json({
     success: true,
     redirect: result.redirect,
+    secretHash,
   });
 
   // Set auth cookie
