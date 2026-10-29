@@ -1,8 +1,7 @@
 import Link from "next/link";
 import { buscarNegocios, listarCategoriasAtivas } from "@/application/catalogo";
 import { Button } from "@/ui/components/button";
-
-export const dynamic = "force-dynamic";
+import { NativeSelect } from "@/ui/components/native-select";
 import {
   Card,
   CardContent,
@@ -11,13 +10,7 @@ import {
   CardTitle,
 } from "@/ui/components/card";
 import { Input } from "@/ui/components/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/ui/components/select";
+import { Label } from "@/ui/components/label";
 import { Badge } from "@/ui/components/badge";
 import {
   MapPin,
@@ -29,6 +22,8 @@ import {
   Sparkles,
 } from "lucide-react";
 
+export const dynamic = "force-dynamic";
+
 // WhatsApp Icon Component
 function WhatsAppIcon() {
   return (
@@ -38,7 +33,7 @@ function WhatsAppIcon() {
       fill="currentColor"
       aria-hidden="true"
     >
-      <path d="M20.52 3.48a11.914 11.914 0 0 0-7.26-3.36 11.9 11.9 0 0 0-7.12 3.03A11.94 11.94 0 0 0 1.56 11.67c0 2.57.94 4.95 2.58 6.87l-1.92 7.35c-.14.55.15 1.1.6 1.35.38.17.81.09 1.13-.14l3.44-2.48a.5.5 0 0 1 .64-.02c2.36 1.74 5.24 2.79 8.15 2.79 4.02 0 7.57-1.93 9.9-4.93a11.87 11.87 0 0 0 3.18-8.67 11.92 11.92 0 0 0-3.36-7.47 11.95 11.95 0 0 0-7.31-3.28 11.97 11.97 0 0 0-7.32 3.03A11.97 11.97 0 0 0 12 22.56c0 6.63-5.37 12-12 12S0 18.63 0 12 5.37 0 12 0s12 5.37 12 12a11.96 11.96 0 0 1-.14 1.58 11.85 11.85 0 0 1-1.44.7c-1.84.18-3.65-.36-5.1-1.44-.87-.61-1.6-1.43-2.2-2.38-.52-.82-.78-1.74-.74-2.73.02-.47.11-.93.29-1.38.3-.74.88-1.39 1.58-1.92a9.66 9.66 0 0 1 2.52-.92c.95 0 1.9.15 2.81.43.45.14.9.23 1.34.28l.32.04c.27.02.54-.04.77-.18.27-.17.48-.4.63-.68.13-.24.2-.5.27-.8.03-.08.05-.17.06-.26.01-.08-.01-.16-.02-.24-.01-.17 0-.35-.01-.52-.02-.69-.01-1.37-.03-1.98-.04l-.35-.02a53.37 53.37 0 0 1-2.1-.33c-.25-.05-.5-.09-.73-.14a.5.5 0 0 1-.17-.81c.31-1.03.65-2.04 1.04-3.06.2-.47.32-.94.41-1.42.1-.47.15-.93.19-1.4.07-.81.1-1.61.1-2.43 0-.92-.04-1.84-.12-2.72-.08-.7-.17-1.37-.32-2.01-.18-.75-.4-1.47-.71-2.15-.36-.79-.8-1.5-1.29-2.1-.62-.73-1.32-1.33-2.11-1.77-.3-.18-.59-.36-.88-.53-.7-.44-1.24-1.03-1.64-1.71-.23-.38-.43-.77-.58-1.18-.15-.4-.26-.8-.33-1.2-.07-.38-.1-.76-.12-1.14-.02-.4-.02-.8-.01-1.2.01-.4.01-.8.01-1.2 0-.4.01-.8.01-1.2 0-.4.01-.8.01-1.2 0-.39.01-.78.01-1.17.01-.38 0-.77-.01-1.15-.01-.36-.01-.72-.01-1.07-.02-.33-.01-.65-.01-.96-.01-.3-.01-.59-.01-.89 0-.28 0-.55 0-.83.01-1.16.02-1.52.03-1.88.05-2.24.08-2.6.13-2.96.19-3.32.27-3.68.37-3.81.41-3.84.41-3.85.41h-.16c-3.34-.02-6.38-.1-9.38-.1-2.78 0-5.44.06-7.9.18-.82.04-1.62.11-2.4.22-.96.13-1.87.34-2.72.61-1.14.37-2.2.87-3.13 1.26-.4.17-.8.36-1.17.57-1.38.79-1.22.94-1.77 1.43-1.85 1.85-1.18 1.85-1.18 1.85-1.18 1.85-1.18 1.85-1.18 1.85-1.18 1.85-1.18 1.85-1.18 1.85-1.18 1.85-1.18 1.85-1.18 1.85-1.18 1.85-1.18 1.85-1.18 1.85-1.18 1.85-1.18 1.85-1.18" />
+      <path d="M20.52 3.48a11.914 11.914 0 0 0-7.26-3.36 11.9 11.9 0 0 0-7.12 3.03A11.94 11.94 0 0 0 1.56 11.67c0 2.57.94 4.95 2.58 6.87l-1.92 7.35c-.14.55.15 1.1.6 1.35.38.17.81.09 1.13-.14l3.44-2.48a.5.5 0 0 1 .64-.02c2.36 1.74 5.24 2.79 8.15 2.79 4.02 0 7.57-1.93 9.9-4.93a11.87 11.87 0 0 0 3.18-8.67 11.92 11.92 0 0 0-3.36-7.47 11.95 11.95 0 0 0-7.31-3.28 11.97 11.97 0 0 0-7.32 3.03A11.97 11.97 0 0 0 12 22.56c0 6.63-5.37 12-12 12S0 18.63 0 12 5.37 0 12 0s12 5.37 12 12a11.96 11.96 0 0 1-.14 1.58 11.85 11.85 0 0 1-1.44.7c-1.84.18-3.65-.36-5.1-1.44-.87-.61-1.6-1.43-2.2-2.38-.52-.82-.78-1.74-.74-2.73.02-.47.11-.93.29-1.38.3-.74.88-1.39 1.58-1.92a9.66 9.66 0 0 1 2.52-.92c.95 0 1.9.15 2.81.43.45.14.9.23 1.34.28l.32.04c.27.02.54-.04.77-.18.27-.17.48-.4.63-.68.13-.24.2-.5.27-.8.03-.08.05-.17.06-.26.01-.08.01-.16-.02-.24-.01-.17 0-.35-.01-.52-.02-.69-.01-1.37-.03-1.98-.04l-.35-.02a53.37 53.37 0 0 1-2.1-.33c-.25-.05-.5-.09-.73-.14a.5.5 0 0 1-.17-.81c.31-1.03.65-2.04 1.04-3.06.2-.47.32-.94.41-1.42.1-.47.15-.93.19-1.4.07-.81.1-1.61.1-2.43 0-.92-.04-1.84-.12-2.72-.08-.7-.17-1.37-.32-2.01-.18-.75-.4-1.47-.71-2.15-.36-.79-.8-1.5-1.29-2.1-.62-.73-1.32-1.33-2.11-1.77-.3-.18-.59-.36-.88-.53-.7-.44-1.24-1.03-1.64-1.71-.23-.38-.43-.77-.58-1.18-.15-.4-.26-.8-.33-1.2-.07-.38-.1-.76-.12-1.14-.02-.4-.02-.8-.01-1.2-.01-.4-.01-.8-.01-1.2 0-.4.01-.8.01-1.2 0-.4.01-.8.01-1.2 0-.4.01-.8.01-1.2 0-.4.01-.8.01-1.2 0-.39.01-.78.01-1.17.01-.38 0-.77-.01-1.15-.01-.36-.01-.72-.01-1.07-.02-.33-.01-.65-.01-.96-.01-.3-.01-.59-.01-.89 0-.28 0-.55 0-.83.01-1.16.02-1.52.03-1.88.05-2.24.08-2.6.13-2.96.19-3.32.27-3.68.37-3.81.41-3.84.41-3.85.41h-.16c-3.34-.02-6.38-.1-9.38-.1-2.78 0-5.44.06-7.9.18-.82.04-1.62.11-2.4.22-.96.13-1.87.34-2.72.61-1.14.37-2.2.87-3.13 1.26-.4.17-.8.36-1.17.57-1.38.79-1.22.94-1.77 1.43-1.85 1.85-1.18 1.85-1.18 1.85-1.18 1.85-1.18 1.85-1.18 1.85-1.18 1.85-1.18 1.85-1.18 1.85-1.18 1.85-1.18 1.85-1.18 1.85-1.18 1.85-1.18 1.85-1.18 1.85-1.18 1.85-1.18" />
     </svg>
   );
 }
@@ -242,10 +237,10 @@ async function HomePage() {
         </div>
       </section>
 
-      {/* Categorias */}
+      {/* Categorias com Filtro */}
       <section className="py-16 md:py-24 bg-muted/30 dark:bg-muted/10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between mb-8">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8 gap-4">
             <div>
               <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium mb-3">
                 <Tag className="h-4 w-4" />
@@ -261,6 +256,36 @@ async function HomePage() {
             >
               Ver todas <span aria-hidden="true">→</span>
             </Link>
+          </div>
+
+          {/* Filtro de categoria com NativeSelect */}
+          <div className="mb-6">
+            <Label
+              htmlFor="filtro-categoria-home"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
+              Filtrar por categoria
+            </Label>
+            <NativeSelect
+              id="filtro-categoria-home"
+              name="categoria"
+              value=""
+              onChange={(e) => {
+                const slug = e.target.value;
+                if (slug) {
+                  window.location.href = `/catalogo?categoria=${slug}`;
+                } else {
+                  window.location.href = "/catalogo";
+                }
+              }}
+            >
+              <option value="">Todas as categorias</option>
+              {categoriasAtivas.map((cat) => (
+                <option key={cat.id} value={cat.slug}>
+                  {cat.nome}
+                </option>
+              ))}
+            </NativeSelect>
           </div>
 
           <div className="flex flex-wrap gap-3">
@@ -288,7 +313,7 @@ async function HomePage() {
       {/* Negócios em Destaque */}
       <section className="py-16 md:py-24 bg-background">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between mb-8">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8 gap-4">
             <div>
               <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent/10 text-accent text-sm font-medium mb-3">
                 <Sparkles className="h-4 w-4" />
