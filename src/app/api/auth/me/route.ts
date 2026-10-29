@@ -11,14 +11,21 @@ import { administrador } from "@/infrastructure/db/schema/administrador";
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { jwtVerify } from "jose";
+import { createHash } from "crypto";
 
 export async function GET() {
   const cookieStore = await cookies();
   const token = cookieStore.get("auth_token")?.value ?? null;
 
+  // Hash do segredo para diagnóstico (não expõe o segredo)
+  const secretHash = createHash("sha256")
+    .update(Buffer.from(JWT_SECRET))
+    .digest("hex")
+    .slice(0, 16);
+
   if (!token) {
     return NextResponse.json(
-      { error: "No token", step: "cookie" },
+      { error: "No token", step: "cookie", secretHash },
       { status: 401 },
     );
   }
@@ -38,7 +45,7 @@ export async function GET() {
         step: "jwtVerify",
         message: e.message,
         code: e.code,
-        jwtSecretLength: JWT_SECRET.length,
+        secretHash,
         issuer: JWT_ISSUER,
         audience: JWT_AUDIENCE,
       },
@@ -48,7 +55,7 @@ export async function GET() {
 
   if (typeof payload.adminId !== "string" || typeof payload.tv !== "number") {
     return NextResponse.json(
-      { error: "Invalid payload types", step: "payload", payload },
+      { error: "Invalid payload types", step: "payload", payload, secretHash },
       { status: 401 },
     );
   }
@@ -66,14 +73,19 @@ export async function GET() {
 
   if (!admin) {
     return NextResponse.json(
-      { error: "Admin not found", step: "db", adminId: payload.adminId },
+      {
+        error: "Admin not found",
+        step: "db",
+        adminId: payload.adminId,
+        secretHash,
+      },
       { status: 401 },
     );
   }
 
   if (!admin.ativo) {
     return NextResponse.json(
-      { error: "Admin inactive", step: "active", admin },
+      { error: "Admin inactive", step: "active", admin, secretHash },
       { status: 401 },
     );
   }
@@ -85,6 +97,7 @@ export async function GET() {
         step: "tokenVersion",
         dbTokenVersion: admin.tokenVersion,
         jwtTokenVersion: payload.tv,
+        secretHash,
       },
       { status: 401 },
     );
@@ -94,5 +107,6 @@ export async function GET() {
     success: true,
     admin: { id: admin.id, nome: admin.nome, email: admin.email },
     payload,
+    secretHash,
   });
 }
