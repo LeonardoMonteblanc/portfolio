@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { buscarNegocios, listarCategoriasAtivas } from "@/application/catalogo";
 import { Button } from "@/ui/components/button";
+
+export const dynamic = "force-dynamic";
 import {
   Card,
   CardContent,
@@ -411,3 +413,5 @@ async function HomePage() {
     </div>
   );
 }
+
+export default HomePage;

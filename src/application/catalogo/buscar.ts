@@ -49,7 +49,15 @@ export async function buscarNegocios(
     porPagina?: number;
     ordenacao?: "relevancia" | "nome_asc" | "nome_desc" | "atualizado_desc";
   } = {},
-) {
+): Promise<{
+  negocios: NegocioCompleto[];
+  paginacao: {
+    pagina: number;
+    porPagina: number;
+    total: number;
+    totalPaginas: number;
+  };
+}> {
   const {
     q,
     categoriasIds,
@@ -243,15 +251,15 @@ export async function buscarNegocios(
   }
 
   const agora = new Date();
-  const negocios = negociosBase.map((n) => {
-    const horariosN = (horariosArr as any[])
+  const negocios: NegocioCompleto[] = negociosBase.map((n) => {
+    const horariosN = horariosArr
       .filter((h) => h.negocioId === n.id)
       .map((h) => ({
         diaSemana: h.diaSemana,
         horaAbertura: h.horaAbertura,
         horaFechamento: h.horaFechamento,
       }));
-    const abertoAgora =
+    const abertoAgora: "aberto" | "fechado" | "sem_horario" =
       horariosN.length > 0
         ? calcularAbertoAgora(horariosN, new Date())
         : "sem_horario";
@@ -262,50 +270,24 @@ export async function buscarNegocios(
       nome: n.nome,
       descricao: n.descricao,
       situacaoPublicacao: n.situacaoPublicacao,
-      categorias: categoriasRel
-        .filter((c) => c.negocioId === n.id)
-        .map((c) => ({
-          id: c.categoria.id,
-          nome: c.categoria.nome,
-          slug: c.categoria.slug,
-        })),
-      contatos: contatosArr
-        .filter((c) => c.negocioId === n.id && c.valido)
-        .sort((a, b) => a.ordem - b.ordem)
-        .map((c) => ({ tipo: c.tipo, valor: c.valor, ordem: c.ordem })),
-      localizacao: localizacoesArr.find((l) => l.negocioId === n.id)
-        ? {
-            bairro: localizacoesArr.find((l) => l.negocioId === n.id)!.bairro,
-            areaAtendimento: localizacoesArr.find((l) => l.negocioId === n.id)!
-              .areaAtendimento,
-          }
-        : null,
-      horarios: horariosArr
-        .filter((h) => h.negocioId === n.id)
-        .map((h) => ({
-          diaSemana: h.diaSemana,
-          horaAbertura: h.horaAbertura,
-          horaFechamento: h.horaFechamento,
-        })),
-      abertoAgora:
-        horariosArr.filter((h) => h.negocioId === n.id).length > 0
-          ? calcularAbertoAgora(
-              horariosArr
-                .filter((h) => h.negocioId === n.id)
-                .map((h) => ({
-                  diaSemana: h.diaSemana,
-                  horaAbertura: h.horaAbertura,
-                  horaFechamento: h.horaFechamento,
-                })),
-              new Date(),
-            )
-          : "sem_horario",
+      categorias: categoriasByNegocio.get(n.id) || [],
+      contatos: (contatosByNegocio.get(n.id) || []).sort(
+        (a, b) => a.ordem - b.ordem,
+      ),
+      localizacao: localizacoesByNegocio.get(n.id) || null,
+      horarios: horariosN,
+      abertoAgora,
     };
   });
 
   return {
     negocios,
-    paginacao: { pagina: 1, porPagina: 20, total: 0, totalPaginas: 0 },
+    paginacao: {
+      pagina: params.pagina || 1,
+      porPagina: params.porPagina || 20,
+      total: totalResult,
+      totalPaginas: Math.ceil(totalResult / (params.porPagina || 20)),
+    },
   };
 }
 
