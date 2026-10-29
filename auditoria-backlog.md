@@ -90,6 +90,15 @@
   - Reestrutura: `src/app/(admin)/configuracoes/*` → `src/app/(admin)/admin/configuracoes/*`
 - **Evidência:** Build gera rotas corretas `/admin/solicitacoes`, `/admin/negocios`, `/admin/categorias`, `/admin/forum`, `/admin/votacoes`, `/admin/imagens`, `/admin/configuracoes`. Sidebar links agora funcionam.
 
+### Correção adicional — Formulário de aprovação de solicitações
+
+- **Causa raiz:** O formulário de ação no detail page usava Server Action inline em Server Component. O `useActionState` não estava sendo usado, então o retorno da action (sucesso/erro) não era capturado e exibido ao usuário. O `revalidatePath` apenas invalidava cache, não causava re-render com feedback.
+- **Arquivos alterados:**
+  - Novo: `src/app/(admin)/admin/solicitacoes/[id/]/_components/acao-form.tsx` (Client Component com `useActionState`)
+  - `src/app/(admin)/admin/solicitacoes/[id/]/page.tsx` - usa novo componente
+  - `src/application/solicitacoes/analise.ts` - usa `normalizarSlug` + `gerarSlugUnico` para slug único
+- **Evidência:** Build passa, 201 testes unitários passam. Formulário agora exibe mensagens de erro/sucesso corretamente.
+
 ## 2. Identidade visual por rota (FASE 5)
 
 | Rota       | Segue o guia? | Ajustes feitos                              | Conflitos com docs-projeto | Lacunas no guia                      |
