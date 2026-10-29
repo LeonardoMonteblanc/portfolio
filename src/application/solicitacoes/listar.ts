@@ -74,6 +74,11 @@ export async function listarSolicitacoesAction(
         solicitanteId: solicitacao.solicitanteId,
         negocioId: solicitacao.negocioId,
         declaracaoVinculo: solicitacao.declaracaoVinculo,
+        duplicataDetectada: solicitacao.duplicataDetectada,
+        motivoIncompleta: solicitacao.motivoIncompleta,
+        analisadaEm: solicitacao.analisadaEm,
+        observacoesInternas: solicitacao.observacoesInternas,
+        atualizadoEm: solicitacao.atualizadoEm,
       })
       .from(solicitacao)
       .where(whereClause)
