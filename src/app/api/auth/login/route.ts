@@ -10,5 +10,21 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: result.error }, { status: 401 });
   }
 
-  return NextResponse.json({ success: true, redirect: result.redirect });
+  const response = NextResponse.json({
+    success: true,
+    redirect: result.redirect,
+  });
+
+  // Set auth cookie
+  if (result.token) {
+    response.cookies.set("auth_token", result.token, {
+      httpOnly: true,
+      secure: true,
+      sameSite: "lax",
+      maxAge: 7 * 24 * 60 * 60, // 7 days
+      path: "/",
+    });
+  }
+
+  return response;
 }

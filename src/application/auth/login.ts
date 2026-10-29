@@ -7,7 +7,6 @@ import { administrador } from "@/infrastructure/db/schema/administrador";
 import { eq } from "drizzle-orm";
 import { hashSenha, verificarSenha } from "@/infrastructure/auth/hash";
 import { gerarJWT } from "@/infrastructure/auth/jwt";
-import { cookies } from "next/headers";
 import { rateLimitLogin } from "@/infrastructure/auth/rate-limit";
 import {
   logLogin,
@@ -23,8 +22,7 @@ const loginSchema = z.object({
 
 export async function loginAction(prevState: unknown, formData: FormData) {
   // Rate limit
-  const cookieStore = await cookies();
-  const ip = cookieStore.get("x-forwarded-for")?.value || "unknown";
+  const ip = "unknown"; // IP will be handled by API route
   const { success } = await rateLimitLogin.limit(ip);
   if (!success) {
     return { error: "Muitas tentativas. Tente novamente em 1 minuto." };
@@ -54,7 +52,7 @@ export async function loginAction(prevState: unknown, formData: FormData) {
       atorTipo: "admin",
       emailTentado: email,
       motivo: "admin_nao_encontrado",
-      ipOrigem: ip,
+      ipOrigem: "unknown",
     });
 
     return { error: "E-mail ou senha incorretos." };
@@ -65,7 +63,7 @@ export async function loginAction(prevState: unknown, formData: FormData) {
       atorTipo: "admin",
       emailTentado: email,
       motivo: "admin_inativo",
-      ipOrigem: ip,
+      ipOrigem: "unknown",
     });
 
     return { error: "E-mail ou senha incorretos." };
@@ -79,7 +77,7 @@ export async function loginAction(prevState: unknown, formData: FormData) {
       adminId: admin.id,
       emailTentado: email,
       motivo: "senha_invalida",
-      ipOrigem: ip,
+      ipOrigem: "unknown",
     });
 
     return { error: "E-mail ou senha incorretos." };
@@ -88,46 +86,17 @@ export async function loginAction(prevState: unknown, formData: FormData) {
   // Gerar JWT
   const token = await gerarJWT(admin);
 
-  // Cookie httpOnly, Secure, SameSite=Lax
-  cookieStore.set("auth_token", token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    maxAge: 7 * 24 * 60 * 60, // 7 dias
-    path: "/",
-  });
-
   // Log sucesso
   await db.insert(logLogin).values({
     atorTipo: "admin",
     adminId: admin.id,
-    ipOrigem: ip,
+    ipOrigem: "unknown",
   });
 
-  return { success: true, redirect: "/admin" };
+  return { success: true, redirect: "/admin", token };
 }
 
 export async function logoutAction() {
-  const cookieStore = await cookies();
-  const token = cookieStore.get("auth_token")?.value;
-
-  if (token) {
-    try {
-      // Tentar obter adminId do token para log
-      const { validarJWT } = await import("@/infrastructure/auth/jwt");
-      const payload = await validarJWT(token);
-
-      if (payload?.adminId) {
-        await db.insert(logLogout).values({
-          atorTipo: "admin",
-          adminId: payload.adminId,
-        });
-      }
-    } catch {
-      // Ignorar erros de validação de token no logout
-    }
-  }
-
-  cookieStore.delete("auth_token");
-  return { success: true, redirect: "/login" };
+  // Cookie deletion will be handled by API route
+  return { success: true, redirect: "/login", deleteCookie: true };
 }
