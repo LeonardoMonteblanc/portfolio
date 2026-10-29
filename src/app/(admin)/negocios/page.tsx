@@ -3,13 +3,7 @@ import { listarNegociosAction } from "@/application/negocios/listar";
 import { Button } from "@/ui/components/button";
 import { Input } from "@/ui/components/input";
 import { Label } from "@/ui/components/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/ui/components/select";
+import { NativeSelect } from "@/ui/components/native-select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/ui/components/card";
 import {
   Table,
@@ -95,19 +89,18 @@ export default async function NegociosPage({
             </div>
             <div className="space-y-2">
               <Label htmlFor="situacao">Situação</Label>
-              <Select value={params.situacao || ""} onValueChange={() => {}}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Todas" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">Todas</SelectItem>
-                  {SITUACOES.map((s) => (
-                    <SelectItem key={s.value} value={s.value}>
-                      {s.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <NativeSelect
+                id="situacao"
+                name="situacao"
+                value={params.situacao || ""}
+              >
+                <option value="">Todas</option>
+                {SITUACOES.map((s) => (
+                  <option key={s.value} value={s.value}>
+                    {s.label}
+                  </option>
+                ))}
+              </NativeSelect>
             </div>
             <Button type="submit">
               <span className="mr-2">🔍</span>
