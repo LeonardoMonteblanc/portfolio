@@ -54,7 +54,7 @@ export async function GET() {
     );
   }
 
-  // Test jwtVerify directly with detailed error
+  // Test jwtVerify
   let payload: any;
   try {
     const result = await jwtVerify(token, JWT_SECRET, {
