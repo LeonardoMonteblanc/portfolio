@@ -74,7 +74,7 @@ export async function listarSolicitacoesAction(
         situacao: solicitacao.situacao,
         origemDecisao: solicitacao.origemDecisao,
         declaracaoVinculo: solicitacao.declaracaoVinculo,
-        dadosNegocioProposto: solicitacao.dadosNegocioProposto,
+        // dadosNegocioProposto: solicitacao.dadosNegocioProposto, // JSONB - removido temporariamente
         duplicataDetectada: solicitacao.duplicataDetectada,
         motivoIncompleta: solicitacao.motivoIncompleta,
         analisadaEm: solicitacao.analisadaEm,
