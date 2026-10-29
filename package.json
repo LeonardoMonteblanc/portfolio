@@ -14,6 +14,7 @@
     "test:a11y": "playwright test --grep @a11y",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
+    "db:migrate:prod": "tsx src/scripts/migrate.ts",
     "db:studio": "drizzle-kit studio",
     "prepare": "husky",
     "format": "prettier --write .",
