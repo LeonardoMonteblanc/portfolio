@@ -132,3 +132,52 @@ Já aplicado por ele no Neon: `log_auditoria`, `log_anonimizacao`, `log_configur
 - Verificação: `GET /` → **200** (era 500), renderiza "Padaria do Zé", "Pizzaria Bella Napoli", "Salão Beleza Total"; `eslint` nos 2 arquivos → limpo; `GET /` sem erros novos no log do dev.
 
 **Pendências que exigem decisão do usuário**: (a) renomear `JWT_TOKEN`→`JWT_SECRET` e criar `RESEND_FROM_EMAIL` no Vercel (destrava `/admin`); (b) remover as 2 tabelas temporárias do Neon; (c) autorizar a reconstrução de `/catalogo`.
+
+---
+
+## 9. Sessão de 2026-10-31 (DSH assumiu a coordenação)
+
+### 9.1 O que foi corrigido e publicado
+
+| Item                                          | Antes                                            | Agora                                                 | Commit    |
+| --------------------------------------------- | ------------------------------------------------ | ----------------------------------------------------- | --------- |
+| Home `/`                                      | 500 em produção                                  | 200, cards renderizando                               | `abbaf39` |
+| `/catalogo`, `/busca`                         | 404 (rotas inexistentes)                         | 200 com busca, filtros e paginação                    | `92ada2c` |
+| Busca textual                                 | erro SQL 42P01 (alias fora de escopo)            | funciona sem acento (`ze` → `Zé`)                     | `92ada2c` |
+| Total da paginação                            | contava todos os publicados                      | respeita os filtros                                   | `92ada2c` |
+| `/sitemap.xml`, `/robots.txt`                 | 404                                              | 200 (106 URLs)                                        | `92ada2c` |
+| `/api/test/*`                                 | 200 sem autenticação                             | 401 (exige admin)                                     | `4aa9629` |
+| Anonimização LGPD                             | não tocava o jsonb                               | mascara PII no jsonb, idempotente                     | `d1ef9d9` |
+| Cron LGPD                                     | 403 eterno (exigia admin)                        | `Authorization: Bearer $CRON_SECRET`                  | `d1ef9d9` |
+| Worker de mídia                               | aprovava imagem sozinho e usava id errado        | mantém `pendente`, promove anexo corretamente         | `fbee980` |
+| F8-14 moderação                               | tela estática com "0"                            | fila real + aprovar/rejeitar                          | `fbee980` |
+| Migrations                                    | 0010/0011 nunca aplicadas e não idempotentes     | idempotentes; 0012 (job/logs) e 0013 (voto) aplicadas | `7ad2ad3` |
+| `voto`                                        | banco com `valor NOT NULL`, schema com `escolha` | alinhado (`escolha`), votação volta a poder gravar    | `7ad2ad3` |
+| `/negocio/[slug]`, `/admin/solicitacoes/[id]` | pastas literais `[slug` + `]` → 404              | renomeadas para `[slug]` / `[id]`                     | `cc2e81f` |
+| `logs/` no .gitignore                         | escondia `schema/logs/*.ts` do build             | regra restrita a `/logs/`                             | `5b5888a` |
+
+Estado verificado em produção (`https://guiabg.com.br`): `/`, `/catalogo`, `/catalogo?q=`, `/negocio/<slug>`, `/solicitar`, `/sitemap.xml`, `/robots.txt` = 200; `/admin` = 307 para `/login`; `/api/test/*`, `/api/lgpd/anonymize`, `/api/media/processar-fila` = 401 sem credencial. As 8 telas de admin respondem 200 com sessão válida.
+
+### 9.2 Infra
+
+- `CRON_SECRET` criado no Vercel (production/preview/development) e no `.env.local`.
+- `vercel.json`: crons `0 3 * * *` (LGPD) e `0 5 * * *` (fila de mídia). **Plano Hobby só aceita 1 execução/dia por cron (máx. 2 crons)** — por isso a fila também roda sob demanda em `POST /api/media/processar-fila`. O cron de backup (`/api/backup`) foi removido porque a rota não existe (F9-11 pendente).
+- Migrations aplicadas no Neon: 14 registros em `drizzle.__drizzle_migrations`; tabela `job` criada.
+- Scripts de diagnóstico movidos para `scripts/diagnostico/` com README de aviso (apontam para produção).
+
+### 9.3 O que continua pendente (backlog real)
+
+1. **F9-04 (RF-062)** — `log_auditoria` existe, mas `appendLog` só é chamado na moderação de imagens. Faltam as 16 tabelas tier 1 (auth, decisões, votos, negócio, categoria, configuração).
+2. **F9-05/F9-06 (RF-063)** — `vw_auditoria_consolidada` não existe; restaram as tabelas-lixo `audit_temp_consolidada` e `tmp_auditoria_consolidada` no Neon (remover).
+3. **F9-01/03/12 (RF-061)** — tela de configurações renderiza, mas os valores são estáticos; falta tabela `configuracao` + seed + persistência.
+4. **F9-09/F9-10 (RF-067)** — e-mail transacional não dispara nos fluxos; webhook do Resend ausente.
+5. **F9-11 (RF-068)** — backup diário + alerta em 3 canais não implementado.
+6. **F7-08..F7-12 / F7-15..F7-18** — votação: schema alinhado, mas a UI/aplicação de resultado seguem desabilitadas.
+7. **Testes** — 201 unitários verdes; integração (95 IT-*) e E2E (20 jornadas) continuam sem infraestrutura (Testcontainers/Playwright).
+8. **F8-09/F8-11/F8-12/F8-13** — exibir imagens no catálogo, upload no formulário público, anexos e promoção de anexo: backend existe, UI não.
+9. **Identidade visual** — `--primary` ainda é `oklch(0.42 0.22 25)` (borgonha), não `#C41E3A`; sidebar/header usam azul e a marca "D"/"Diretório"; hero usa texto diferente do aprovado ("Bento Gonçalves se encontra aqui"). Fase 5 do guia não aplicada.
+
+### 9.4 Regra de convivência (atualizada)
+
+- O DSH é o dono da coordenação. Alterações de schema/migrations, catálogo, LGPD e infra (Vercel/Neon) passam por ele.
+- **OpenCode:** o `opencode run` neste Windows não tem shell funcional (`ls`, `head` ausentes) e cria arquivos `tmp*.js` na raiz. Quando usado, exigir caminhos explícitos, proibir comandos de shell e revisar o diff — e rodar `Get-ChildItem -File tmp*` depois.
