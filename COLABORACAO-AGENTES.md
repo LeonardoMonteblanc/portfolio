@@ -287,7 +287,9 @@ Estado verificado em produção (`https://guiabg.com.br`): `/`, `/catalogo`, `/c
   estrita.
 - **Metadado removido da página pública:** a lista de contatos exibia
   `(ordem: N)` para o visitante — resquício de depuração removido.
-- **Nota aberta:** o `next dev` deste ambiente não hidrata componentes cliente
-  (clique não dispara handler), mesmo com a CSP corrigida; o build de produção
-  hidrata normalmente. O E2E roda no build por causa disso. Vale investigar com
-  o agente de frontend, que trabalha em dev.
+- **Host do `next dev`:** investigado até o fim. O dev **hidrata normalmente**
+  quando a página é aberta por `http://localhost:3000`; por `http://127.0.0.1:3000`
+  o bootstrap do cliente não roda (clique cai no submit nativo). Nada a corrigir
+  no app: o `baseURL` do Playwright agora usa `localhost` e o modo dev deve ser
+  aberto pelo mesmo host. A suspeita inicial de "dev não hidrata" era sintoma
+  disso, não um defeito da aplicação.

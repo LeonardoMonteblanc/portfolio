@@ -44,10 +44,12 @@ redirecionamento de `/admin` sem sessão, tela de login e erro de credencial.
 > mesmo com o HTML do servidor correto. `curl`/`Invoke-WebRequest` davam 200 e
 > escondiam o problema — só um teste que clica encontrou.
 
-> **Nota sobre `next dev`:** neste ambiente o Turbopack dev não hidrata as
-> páginas (clique em componente cliente não dispara handler) — por isso o E2E
-> usa o build. A CSP já permite `unsafe-eval` em desenvolvimento; o problema
-> restante é do modo dev e não afeta produção.
+> **Cuidado com o host em desenvolvimento:** o runtime de dev do Next só hidrata
+> quando a página é aberta por `http://localhost:3000`. Com `http://127.0.0.1:3000`
+> o bootstrap do cliente não roda, o clique cai no submit nativo do formulário e
+> parece que "a aplicação está morta". Foi a causa da primeira falha do E2E —
+> por isso o `baseURL` do Playwright usa `localhost` e o `next dev` deve ser
+> aberto pelo mesmo host. Não afeta produção (build hidrata nos dois hosts).
 
 ## Unitários
 

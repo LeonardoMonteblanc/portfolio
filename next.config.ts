@@ -5,10 +5,19 @@ import type { NextConfig } from "next";
 // `unsafe-eval` a hidratação não roda (o console avisa "eval() is not
 // supported") e os handlers de clique ficam mortos — foi o que quebrou o E2E
 // de login. Produção nunca usa eval e mantém a CSP estrita (RNF-004).
-const scriptSrc =
-  process.env.NODE_ENV === "production"
-    ? "'self' 'unsafe-inline'"
-    : "'self' 'unsafe-inline' 'unsafe-eval'";
+const emProducao = process.env.NODE_ENV === "production";
+
+const scriptSrc = emProducao
+  ? "'self' 'unsafe-inline'"
+  : "'self' 'unsafe-inline' 'unsafe-eval'";
+
+// O cliente de desenvolvimento do Next abre um WebSocket em `/_next/hmr`. A
+// diretiva `connect-src 'self'` NÃO cobre `ws://` no Chrome, e o handshake
+// falha com ERR_INVALID_HTTP_RESPONSE — o runtime de dev fica sem HMR.
+// Liberado apenas fora de produção; em produção não existe HMR.
+const connectSrc = emProducao
+  ? "'self' https://api.resend.com https://*.sentry.io https://*.ingest.sentry.io https://*.ingest.us.sentry.io https://*.upstash.io"
+  : "'self' ws://localhost:* ws://127.0.0.1:* http://localhost:* http://127.0.0.1:* https://api.resend.com https://*.sentry.io https://*.ingest.sentry.io https://*.ingest.us.sentry.io https://*.upstash.io";
 
 const securityHeaders = [
   {
@@ -30,7 +39,7 @@ const securityHeaders = [
       `script-src ${scriptSrc}`,
       "style-src 'self' 'unsafe-inline'",
       "font-src 'self'",
-      "connect-src 'self' https://api.resend.com https://*.sentry.io https://*.ingest.sentry.io https://*.ingest.us.sentry.io https://*.upstash.io",
+      `connect-src ${connectSrc}`,
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'",

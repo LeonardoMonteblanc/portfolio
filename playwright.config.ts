@@ -13,7 +13,9 @@ import { defineConfig, devices } from "@playwright/test";
  * (Neon de produção) e os testes escreveriam na base real.
  */
 const PORTA = Number(process.env.E2E_PORT ?? 3100);
-const baseURL = process.env.E2E_BASE_URL ?? `http://127.0.0.1:${PORTA}`;
+// `localhost` e não `127.0.0.1`: o runtime de dev do Next só hidrata quando o
+// host é `localhost` (com 127.0.0.1 o clique cai no submit nativo do formulário).
+const baseURL = process.env.E2E_BASE_URL ?? `http://localhost:${PORTA}`;
 
 export default defineConfig({
   testDir: "./tests/e2e",
