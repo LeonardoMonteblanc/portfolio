@@ -85,6 +85,7 @@ export default function LoginClient() {
                   className="pl-10"
                   required
                   disabled={carregando}
+                  autoComplete="username"
                 />
               </div>
             </div>
@@ -102,6 +103,7 @@ export default function LoginClient() {
                   className="pl-10"
                   required
                   disabled={carregando}
+                  autoComplete="current-password"
                 />
               </div>
             </div>

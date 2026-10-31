@@ -58,8 +58,32 @@ function NegocioCard({ negocio }: NegocioCardProps) {
     ? primeiroContato.valor.replace(/(\d{2})(\d{4,5})(\d{4})/, "($1) $2-$3")
     : null;
 
+  const handleCardClick = () => {
+    window.location.href = `/negocio/${negocio.slug}`;
+  };
+
+  const handleWhatsAppClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    window.open(
+      `https://wa.me/55${telefoneFormatado!.replace(/\D/g, "")}`,
+      "_blank",
+      "noopener,noreferrer",
+    );
+  };
+
   return (
-    <Link href={`/negocio/${negocio.slug}`} className="group">
+    <article
+      onClick={handleCardClick}
+      className="group cursor-pointer"
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          handleCardClick();
+        }
+      }}
+    >
       <Card className="overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-1 group bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
         <div className="aspect-[4/3] bg-gradient-to-br from-amber-100 to-orange-100 dark:from-amber-900/30 dark:to-orange-900/30 relative overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
@@ -120,20 +144,18 @@ function NegocioCard({ negocio }: NegocioCardProps) {
               </span>
             )}
             {telefoneFormatado && (
-              <a
-                href={`https://wa.me/55${telefoneFormatado.replace(/\D/g, "")}`}
-                target="_blank"
-                rel="noopener noreferrer"
+              <button
+                onClick={handleWhatsAppClick}
                 className="flex items-center gap-1 hover:text-primary transition-colors"
                 aria-label="WhatsApp"
               >
                 <WhatsAppIcon />
-              </a>
+              </button>
             )}
           </div>
         </CardContent>
       </Card>
-    </Link>
+    </article>
   );
 }
 
