@@ -14,7 +14,7 @@ export const voto = pgTable(
     adminId: uuid("admin_id")
       .notNull()
       .references(() => administrador.id),
-    valor: varchar("valor", { length: 10 }).notNull(), // 'sim' | 'nao' | 'abstencao'
+    escolha: varchar("escolha", { length: 20 }).notNull(), // 'aprovacao' | 'rejeicao'
     criadoEm: timestamp("criado_em", { withTimezone: true })
       .notNull()
       .defaultNow(),

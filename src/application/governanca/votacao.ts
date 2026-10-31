@@ -33,109 +33,9 @@ import {
 import { revalidatePath } from "next/cache";
 import { getAdmin } from "@/lib/auth";
 
-// Tipos para queries com relations
-type VotacaoWithRelations = {
-  id: string;
-  situacao: string;
-  encerraEm: Date;
-  contestacaoId: string;
-  contestacao: {
-    id: string;
-    situacao: string;
-    negocioId: string;
-    solicitacaoOrigemId: string | null;
-    negocio: { id: string; situacaoPublicacao: string };
-    solicitacaoOrigem: {
-      id: string;
-      situacao: string;
-      origemDecisao: string | null;
-    } | null;
-  } | null;
-  votos: Array<{
-    id: string;
-    votacaoId: string;
-    adminId: string;
-    valor: string;
-    criadoEm: Date;
-    admin: { id: string; nome: string } | null;
-  }> | null;
-};
-
-type VotoWithAdmin = {
-  id: string;
-  votacaoId: string;
-  adminId: string;
-  valor: string;
-  criadoEm: Date;
-  admin: { id: string; nome: string } | null;
-};
-
-type ContestacaoWithRelations = {
-  id: string;
-  situacao: string;
-  negocioId: string;
-  solicitacaoOrigemId: string | null;
-  autorId: string;
-  negocio: { id: string; situacaoPublicacao: string };
-  solicitacaoOrigem: {
-    id: string;
-    situacao: string;
-    origemDecisao: string | null;
-  } | null;
-};
-
-// Mapeamento entre schema do banco e domínio
-const mapSituacaoVotacaoToDomain = (
-  s: string,
-): "em_andamento" | "aprovada" | "rejeitada" | "sem_aprovacao" => {
-  switch (s) {
-    case "aberta":
-    case "em_andamento":
-      return "em_andamento";
-    case "aprovada":
-      return "aprovada";
-    case "rejeitada":
-      return "rejeitada";
-    case "sem_aprovacao":
-      return "sem_aprovacao";
-    case "encerrada":
-    case "cancelada":
-    default:
-      return "sem_aprovacao";
-  }
-};
-
-const mapSituacaoVotacaoToDb = (
-  s: "em_andamento" | "aprovada" | "rejeitada" | "sem_aprovacao",
-): string => {
-  switch (s) {
-    case "em_andamento":
-      return "aberta";
-    case "aprovada":
-      return "aprovada";
-    case "rejeitada":
-      return "rejeitada";
-    case "sem_aprovacao":
-      return "sem_aprovacao";
-  }
-};
-
-const mapEscolhaToDomain = (v: string): "aprovacao" | "rejeicao" => {
-  if (v === "sim") return "aprovacao";
-  if (v === "nao") return "rejeicao";
-  return "aprovacao";
-};
-
-const mapEscolhaToDb = (e: "aprovacao" | "rejeicao"): "sim" | "nao" => {
-  return e === "aprovacao" ? "sim" : "nao";
-};
-
 const abrirVotacaoSchema = z.object({
   contestacaoId: z.string().uuid(),
   pergunta: z.string().min(5).max(1000),
-  tipo: z.enum(["simples", "qualificada"]),
-  quorumMinimo: z.number().int().min(1),
-  maioriaNecessaria: z.number().int().min(50).max(100),
   encerraEm: z.string().datetime(),
 });
 
@@ -149,12 +49,6 @@ export async function abrirVotacaoAction(
   const rawData = {
     contestacaoId: formData.get("contestacaoId"),
     pergunta: formData.get("pergunta"),
-    tipo: formData.get("tipo"),
-    quorumMinimo: parseInt(formData.get("quorumMinimo") as string, 10),
-    maioriaNecessaria: parseInt(
-      formData.get("maioriaNecessaria") as string,
-      10,
-    ),
     encerraEm: formData.get("encerraEm"),
   };
 
@@ -166,14 +60,7 @@ export async function abrirVotacaoAction(
     return { error: errorMsg || "Dados inválidos" };
   }
 
-  const {
-    contestacaoId,
-    pergunta,
-    tipo,
-    quorumMinimo,
-    maioriaNecessaria,
-    encerraEm,
-  } = parseResult.data;
+  const { contestacaoId, pergunta, encerraEm } = parseResult.data;
 
   const cont = await db.query.contestacao.findFirst({
     where: (c, { eq }) => eq(c.id, contestacaoId),
@@ -191,14 +78,16 @@ export async function abrirVotacaoAction(
     return { error: "Contestação já possui votação ou está encerrada" };
   }
 
+  // Quórum FIXO: admins ativos no momento da ABERTURA da votação
   const adminsAtivos = await db.query.administrador.findMany({
-    // @ts-ignore
-    // @ts-ignore
     where: (a, { eq }) => eq(a.ativo, true),
     columns: { id: true },
   });
-
   const adminIds = new Set(adminsAtivos.map((a) => a.id));
+
+  if (adminIds.size === 0) {
+    return { error: "Nenhum admin ativo para compor quórum" };
+  }
 
   if (!adminIds.has(cont.autorId)) {
     return { error: "Autor da contestação não está no quórum" };
@@ -210,9 +99,9 @@ export async function abrirVotacaoAction(
       .values({
         contestacaoId,
         pergunta,
-        tipo,
+        tipo: "simples",
         quorumMinimo: adminIds.size,
-        maioriaNecessaria,
+        maioriaNecessaria: 50,
         situacao: "em_andamento",
         encerraEm: new Date(encerraEm),
       })
@@ -257,9 +146,7 @@ export async function abrirVotacaoAction(
           const novaSituacao = transicionarSolicitacao(
             sol.situacao as any,
             "ABRIR_CONTESTACAO",
-            {
-              justificativa: "Votação iniciada",
-            },
+            { justificativa: "Votação iniciada" },
           );
 
           await tx
@@ -279,9 +166,6 @@ export async function abrirVotacaoAction(
       }
     }
 
-    // @ts-ignore
-    // @ts-ignore
-    // @ts-ignore
     if (cont.negocio.situacaoPublicacao === "publicado") {
       await tx
         .update(negocioTable)
@@ -300,7 +184,7 @@ export async function abrirVotacaoAction(
     }
   });
 
-  revalidatePath(`/admin/solicitacoes`);
+  revalidatePath("/admin/solicitacoes");
   revalidatePath(`/admin/negocios/${cont.negocioId}`);
 
   return { success: true };
@@ -308,7 +192,7 @@ export async function abrirVotacaoAction(
 
 const registrarVotoSchema = z.object({
   votacaoId: z.string().uuid(),
-  escolha: z.enum(["sim", "nao", "abstencao"]),
+  escolha: z.enum(["aprovacao", "rejeicao"]),
 });
 
 export async function registrarVotoAction(
@@ -333,8 +217,7 @@ export async function registrarVotoAction(
 
   const { votacaoId, escolha } = parseResult.data;
 
-  const votacaoQuery = {
-    // @ts-ignore - complex query type inference
+  const vot = await db.query.votacao.findFirst({
     where: (v, { eq }) => eq(v.id, votacaoId),
     with: {
       contestacao: {
@@ -350,20 +233,16 @@ export async function registrarVotoAction(
         with: {
           autor: { columns: { id: true, nome: true } },
         },
-        // @ts-ignore - complex query type inference
         orderBy: (v, { asc }) => [asc(v.criadoEm)],
       },
     },
-  };
-
-  const vot = await db.query.votacao.findFirst(votacaoQuery);
+  });
 
   if (!vot) {
     return { error: "Votação não encontrada" };
   }
 
-  const situacaoDomain = mapSituacaoVotacaoToDomain(vot.situacao);
-  if (situacaoDomain !== "em_andamento") {
+  if (vot.situacao !== "em_andamento") {
     return { error: "Votação não está aberta para votação" };
   }
 
@@ -371,16 +250,26 @@ export async function registrarVotoAction(
     return { error: "Prazo de votação encerrado" };
   }
 
-  const adminsAtivos = await db.query.administrador.findMany({
-    // @ts-ignore
-    // @ts-ignore
-    where: (a, { eq }) => eq(a.ativo, true),
-    columns: { id: true },
-  });
-  const adminIdsAtivos = new Set(adminsAtivos.map((a) => a.id));
+  const adminIdsAtivos = new Set(
+    (
+      await db.query.administrador.findMany({
+        where: (a, { eq }) => eq(a.ativo, true),
+        columns: { id: true },
+      })
+    ).map((a) => a.id),
+  );
 
   if (!adminIdsAtivos.has(admin.id)) {
     return { error: "Admin não está no quórum (não está ativo)" };
+  }
+
+  const votoExistente = await db.query.voto.findFirst({
+    where: (v, { and }) =>
+      and(eq(v.votacaoId, votacaoId), eq(v.adminId, admin.id)),
+  });
+
+  if (votoExistente) {
+    return { error: "Você já votou nesta votação" };
   }
 
   const votosExistentes = await db.query.voto.findMany({
@@ -389,22 +278,27 @@ export async function registrarVotoAction(
 
   const votosInfo = votosExistentes.map((v) => ({
     adminId: v.adminId,
-    escolha: (v.valor === "sim"
-      ? "aprovacao"
-      : v.valor === "nao"
-        ? "rejeicao"
-        : "aprovacao") as "aprovacao" | "rejeicao",
+    escolha: v.escolha as "aprovacao" | "rejeicao",
     estado: "ativo" as const,
     criadoEm: v.criadoEm,
   }));
 
+  const votosParaValidacao = [
+    ...votosInfo,
+    {
+      adminId: admin.id,
+      escolha,
+      estado: "ativo" as const,
+      criadoEm: new Date(),
+    },
+  ];
+
   try {
-    transicionarVotacao(situacaoDomain, "REGISTRAR_VOTO", {
-      votos: votosInfo,
+    transicionarVotacao("em_andamento", "REGISTRAR_VOTO", {
+      votos: votosParaValidacao,
       adminsAtivos: adminIdsAtivos,
       adminId: admin.id,
-      escolha:
-        escolha === "abstencao" ? undefined : mapEscolhaToDomain(escolha),
+      escolha,
     });
   } catch (e) {
     if (e instanceof VotoDuplicado) {
@@ -420,18 +314,15 @@ export async function registrarVotoAction(
     await tx.insert(votoTable).values({
       votacaoId,
       adminId: admin.id,
-      valor: escolha,
+      escolha,
     });
 
     const votosSim =
-      votosExistentes.filter((v) => v.valor === "sim").length +
-      (escolha === "sim" ? 1 : 0);
+      votosExistentes.filter((v) => v.escolha === "aprovacao").length +
+      (escolha === "aprovacao" ? 1 : 0);
     const votosNao =
-      votosExistentes.filter((v) => v.valor === "nao").length +
-      (escolha === "nao" ? 1 : 0);
-    const votosAbstencao =
-      votosExistentes.filter((v) => v.valor === "abstencao").length +
-      (escolha === "abstencao" ? 1 : 0);
+      votosExistentes.filter((v) => v.escolha === "rejeicao").length +
+      (escolha === "rejeicao" ? 1 : 0);
 
     await tx
       .update(votacaoTable)
@@ -439,7 +330,6 @@ export async function registrarVotoAction(
         totalVotos: votosExistentes.length + 1,
         votosSim,
         votosNao,
-        votosAbstencao,
       })
       .where(eq(votacaoTable.id, votacaoId));
 
@@ -448,15 +338,13 @@ export async function registrarVotoAction(
       atorId: admin.id,
       votacaoId,
       acao: "votar",
-      situacaoAnterior: vot.situacao,
-      situacaoNova: vot.situacao,
+      situacaoAnterior: "em_andamento",
+      situacaoNova: "em_andamento",
     } satisfies typeof logVotacao.$inferInsert);
   });
 
-  revalidatePath(`/admin/solicitacoes`);
-  // @ts-ignore
+  revalidatePath("/admin/solicitacoes");
   if (vot.contestacao) {
-    // @ts-ignore
     revalidatePath(`/admin/negocios/${vot.contestacao.negocioId}`);
   }
 
@@ -485,8 +373,7 @@ export async function apurarVotacaoAction(
 
   const { votacaoId } = parseResult.data;
 
-  const votacaoQuery = {
-    // @ts-ignore - complex query type inference
+  const vot = await db.query.votacao.findFirst({
     where: (v, { eq }) => eq(v.id, votacaoId),
     with: {
       contestacao: {
@@ -502,32 +389,27 @@ export async function apurarVotacaoAction(
         with: {
           autor: { columns: { id: true, nome: true } },
         },
-        // @ts-ignore - complex query type inference
         orderBy: (v, { asc }) => [asc(v.criadoEm)],
       },
     },
-  };
-
-  // @ts-ignore
-  const vot: VotacaoWithRelations | null =
-    await db.query.votacao.findFirst(votacaoQuery);
+  });
 
   if (!vot) {
     return { error: "Votação não encontrada" };
   }
 
-  const situacaoDomain = mapSituacaoVotacaoToDomain(vot.situacao);
-  if (situacaoDomain !== "em_andamento") {
+  if (vot.situacao !== "em_andamento") {
     return { error: "Votação não está em andamento" };
   }
 
-  const adminsAtivos = await db.query.administrador.findMany({
-    // @ts-ignore
-    // @ts-ignore
-    where: (a, { eq }) => eq(a.ativo, true),
-    columns: { id: true },
-  });
-  const adminIdsAtivos = new Set(adminsAtivos.map((a) => a.id));
+  const adminIdsAtivos = new Set(
+    (
+      await db.query.administrador.findMany({
+        where: (a, { eq }) => eq(a.ativo, true),
+        columns: { id: true },
+      })
+    ).map((a) => a.id),
+  );
 
   const votosExistentes = await db.query.voto.findMany({
     where: (v, { eq }) => eq(v.votacaoId, votacaoId),
@@ -535,36 +417,33 @@ export async function apurarVotacaoAction(
 
   const votosInfo = votosExistentes.map((v) => ({
     adminId: v.adminId,
-    escolha: (v.valor === "sim"
-      ? "aprovacao"
-      : v.valor === "nao"
-        ? "rejeicao"
-        : "aprovacao") as "aprovacao" | "rejeicao",
+    escolha: v.escolha as "aprovacao" | "rejeicao",
     estado: "ativo" as const,
     criadoEm: v.criadoEm,
   }));
 
   try {
     const novaSituacaoDomain = transicionarVotacao(
-      situacaoDomain,
+      "em_andamento",
       "CONCLUIR_VOTACAO",
       {
         votos: votosInfo,
         adminsAtivos: adminIdsAtivos,
       },
-    );
+    ) as "aprovada" | "rejeitada" | "sem_aprovacao";
 
     const apuracao = apurarVotacao(votosInfo, adminIdsAtivos);
 
-    await db.transaction(async (tx) => {
-      const novaSituacaoDb = mapSituacaoVotacaoToDb(novaSituacaoDomain);
+    if (!apuracao.quorumCompleto) {
+      return { error: "Quórum incompleto: nem todos os admins ativos votaram" };
+    }
 
+    await db.transaction(async (tx) => {
       await tx
         .update(votacaoTable)
         .set({
-          situacao: novaSituacaoDb,
+          situacao: novaSituacaoDomain,
           encerradaEm: new Date(),
-          // @ts-ignore
           resultado: apuracao.situacao,
           totalVotos: apuracao.aprovacoes + apuracao.rejeicoes,
           votosSim: apuracao.aprovacoes,
@@ -586,8 +465,7 @@ export async function apurarVotacaoAction(
         votacaoId,
         acao: "apurar",
         situacaoAnterior: "em_andamento",
-        situacaoNova: novaSituacaoDb,
-        // @ts-ignore
+        situacaoNova: novaSituacaoDomain,
         resultado: apuracao.situacao,
         totalVotos: apuracao.aprovacoes + apuracao.rejeicoes,
       } satisfies typeof logVotacao.$inferInsert);
@@ -610,17 +488,12 @@ export async function apurarVotacaoAction(
 
           if (sol) {
             try {
-              // @ts-ignore
-              // @ts-ignore
-              // @ts-ignore
-              // @ts-ignore
-              // @ts-ignore
               const novaSituacao = transicionarSolicitacao(
                 sol.situacao as any,
                 "CONCLUIR_VOTACAO",
                 {
-                  // @ts-ignore
-                  resultadoVotacao: apuracao.situacao,
+                  resultadoVotacao: apuracao.situacao as
+                    "aprovada" | "rejeitada" | "sem_aprovacao",
                 },
               );
 
@@ -681,18 +554,11 @@ export async function apurarVotacaoAction(
       }
     });
 
-    revalidatePath(`/admin/solicitacoes`);
-    // @ts-ignore
+    revalidatePath("/admin/solicitacoes");
     if (vot.contestacao) {
-      // @ts-ignore
       revalidatePath(`/admin/negocios/${vot.contestacao.negocioId}`);
     }
 
-    // @ts-ignore
-    // @ts-ignore
-    // @ts-ignore
-    // @ts-ignore
-    // @ts-ignore
     return { success: true, resultado: apuracao.situacao };
   } catch (e) {
     if (e instanceof QuorumIncompleto) {
@@ -724,8 +590,7 @@ export async function detalharVotacaoAction(
 
   const { votacaoId } = parseResult.data;
 
-  const votacaoQuery = {
-    // @ts-ignore - complex query type inference
+  const vot = await db.query.votacao.findFirst({
     where: (v, { eq }) => eq(v.id, votacaoId),
     with: {
       contestacao: {
@@ -741,23 +606,16 @@ export async function detalharVotacaoAction(
         with: {
           autor: { columns: { id: true, nome: true } },
         },
-        // @ts-ignore - complex query type inference
         orderBy: (v, { asc }) => [asc(v.criadoEm)],
       },
     },
-  };
-
-  // @ts-ignore
-  const vot: VotacaoWithRelations | null =
-    await db.query.votacao.findFirst(votacaoQuery);
+  });
 
   if (!vot) {
     return { error: "Votação não encontrada" };
   }
 
   const adminsAtivos = await db.query.administrador.findMany({
-    // @ts-ignore
-    // @ts-ignore
     where: (a, { eq }) => eq(a.ativo, true),
     columns: { id: true, nome: true },
   });
@@ -773,7 +631,7 @@ export async function detalharVotacaoAction(
     success: true,
     votacao: {
       ...vot,
-      situacaoDomain: mapSituacaoVotacaoToDomain(vot.situacao),
+      situacaoDomain: vot.situacao,
     },
     adminsAtivos,
     naoVotaram,
