@@ -1,0 +1,65 @@
+# 03 — Módulos do backend
+
+Cada caso de uso é um arquivo pequeno e explícito. Server actions começam com
+`"use server"`; serviços (`*.service.ts`) são funções puras de orquestração.
+
+## application/
+
+| Módulo                                 | Responsabilidade                                            | Entradas principais                                                                                                                   |
+| -------------------------------------- | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `catalogo/buscar.ts`                   | busca/filtros/paginação do catálogo; bairros; sitemap       | `buscarNegocios`, `buscarNegocioPorSlug`, `listarCategoriasAtivas`, `listarBairrosComNegocios`, `listarNegociosPublicadosParaSitemap` |
+| `solicitacoes/criar.ts`                | criar solicitação (transação com solicitante, aceite e log) | `criarSolicitacaoAction`                                                                                                              |
+| `solicitacoes/listar.ts`               | listagem/filtros do painel                                  | `listarSolicitacoesAction`                                                                                                            |
+| `solicitacoes/analise.ts`              | iniciar análise, decidir, reabrir                           | `iniciarAnaliseAction`, `registrarDecisaoAction`                                                                                      |
+| `solicitacoes/atualizar.ts`            | correções (RF-027..029)                                     | —                                                                                                                                     |
+| `negocios/*`                           | criar, editar, publicar, invalidar, listar                  | `criarNegocioAction`, `publicarNegocioAction`                                                                                         |
+| `categorias/*`                         | criar, editar, desativar, reativar, mesclar, listar         | `criarCategoriaAction`, `mesclarCategoriasAction`                                                                                     |
+| `governanca/forum.ts`                  | comentário e manifestação                                   | `comentarAction`                                                                                                                      |
+| `governanca/contestacao.ts`            | abrir contestação (ME-03)                                   | `abrirContestacaoAction`                                                                                                              |
+| `governanca/votacao.ts`                | registrar voto e apurar                                     | `registrarVotoAction`                                                                                                                 |
+| `midia/upload-publico.ts`              | upload no formulário público (F8-11)                        | —                                                                                                                                     |
+| `midia/processar.service.ts`           | worker da fila (imagem/anexo/promover)                      | `processarFila`                                                                                                                       |
+| `lgpd/anonymize.service.ts`            | anonimização manual + expurgo por retenção                  | `anonimizarSolicitante`, `cronAnonimizacaoAutomatica`                                                                                 |
+| `configuracao/configuracao.service.ts` | parâmetros operacionais com validação e auditoria           | `listarConfiguracoes`, `obterConfiguracao*`, `atualizarConfiguracao`, `garantirConfiguracoesPadrao`                                   |
+| `auth/*`                               | login, recuperação de senha                                 | `loginAction`, `solicitarRecuperacaoSenhaAction`                                                                                      |
+
+## infrastructure/
+
+| Módulo                   | Responsabilidade                                                                                 |
+| ------------------------ | ------------------------------------------------------------------------------------------------ |
+| `db/client.ts`           | conexão Drizzle (com fallback só para o build da Vercel)                                         |
+| `db/schema/*`            | tabelas por domínio; `logs/` tem as tabelas append-only                                          |
+| `auth/jwt.ts`            | assinar/validar JWT (jose)                                                                       |
+| `auth/hash.ts`           | argon2                                                                                           |
+| `auth/rate-limit.ts`     | Upstash                                                                                          |
+| `media/media.service.ts` | URL assinada, validação de MIME/tamanho, chave no bucket                                         |
+| `queue/queue.service.ts` | fila: enfileirar, reivindicar (SKIP LOCKED), concluir, falhar com backoff, estatísticas, limpeza |
+| `audit/audit.service.ts` | `appendLog` (aceita transação) + `criarSnapshot`                                                 |
+| `email/*`                | Resend + templates                                                                               |
+| `r2/client.ts`           | SDK S3 apontando para o R2                                                                       |
+
+## Convenções que você deve seguir
+
+1. **Valide na borda com Zod** e devolva `ErroDominio` com código estável para
+   erros de regra. Nada de `any` para "passar".
+2. **Mutação composta = transação.** Se grava entidade + log, use
+   `db.transaction`, e passe o `tx` para `appendLog(input, tx)`.
+3. **Log é requisito, não enfeite.** Toda operação listada em RF-062 grava
+   `log_<evento>` **e** `log_auditoria` (índice consultável).
+4. **Nunca apague dado para "resolver" erro.** Se o schema e o banco divergirem,
+   corrija a migration (ver [06](./06-banco-e-migrations.md)).
+5. **Nada de stub.** `return []`, `TODO`, `catch {}` ou string "em breve"
+   escondem falha e quebram contratos de teste.
+6. **Documente o porquê** no topo do módulo quando a regra não for óbvia.
+
+## Rotas de API (não públicas)
+
+| Rota                                                      | Auth                   | Função                     |
+| --------------------------------------------------------- | ---------------------- | -------------------------- |
+| `POST /api/auth/login`, `POST /api/auth/logout`           | pública                | sessão                     |
+| `POST /api/auth/recuperar-senha/*`                        | pública                | recuperação                |
+| `POST /api/media/upload-url`, `POST /api/media/confirmar` | admin                  | upload                     |
+| `GET/POST /api/media/processar-fila`                      | `CRON_SECRET` ou admin | worker / estatísticas      |
+| `POST /api/admin/imagens/[id]/moderar`                    | admin                  | moderação                  |
+| `POST /api/lgpd/anonymize`, `GET` (cron)                  | admin / `CRON_SECRET`  | LGPD                       |
+| `GET /api/test/*`                                         | admin                  | diagnóstico (exige sessão) |

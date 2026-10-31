@@ -181,3 +181,19 @@ Estado verificado em produção (`https://guiabg.com.br`): `/`, `/catalogo`, `/c
 
 - O DSH é o dono da coordenação. Alterações de schema/migrations, catálogo, LGPD e infra (Vercel/Neon) passam por ele.
 - **OpenCode:** o `opencode run` neste Windows não tem shell funcional (`ls`, `head` ausentes) e cria arquivos `tmp*.js` na raiz. Quando usado, exigir caminhos explícitos, proibir comandos de shell e revisar o diff — e rodar `Get-ChildItem -File tmp*` depois.
+
+### 9.5 Documentação de engenharia (31/10, segunda parte)
+
+- Criada a pasta `docs-dev/` (7 arquivos) com arquitetura, setup, módulos,
+  testes, replicação para outra cidade e regras de banco/migrations.
+  Ela é a referência para quem forka o projeto; a documentação de produto
+  continua externa e soberana.
+- `README.md` da raiz reescrito para o projeto open source.
+- Testes de integração saíram de **0** para **28** (catálogo, LGPD, fila,
+  configuração), rodando contra Postgres real recriado a partir das migrations.
+- Novo módulo: `src/application/configuracao/configuracao.service.ts`
+  (F9-01/F9-03) com tabela `configuracao`, seed `pnpm db:seed:config` e
+  auditoria na mesma transação.
+- `appendLog` agora aceita o `tx` da transação em curso.
+- Regra de retenção corrigida para o que o RNF-018 pede: expurgo conta **2 anos
+  após o estado terminal** da solicitação, não a partir da criação.
