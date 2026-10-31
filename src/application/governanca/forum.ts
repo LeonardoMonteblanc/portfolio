@@ -26,6 +26,8 @@ import {
 } from "@/domain/errors";
 import { revalidatePath } from "next/cache";
 import { getAdmin } from "@/lib/auth";
+import { appendLog } from "@/infrastructure/audit/audit.service";
+import { contextoDaRequisicao } from "@/lib/audit-context";
 
 const criarForumPublicacaoSchema = z.object({
   negocioId: z.string().uuid(),
@@ -103,6 +105,17 @@ export async function criarForumPublicacaoAction(
       acao: "criar" as const,
       conteudoNovo: conteudo,
     } satisfies typeof logForum.$inferInsert);
+
+    await appendLog(
+      {
+        ...(await contextoDaRequisicao("admin", admin.id)),
+        acao: "publicar_forum",
+        entidadeTipo: "forum_publicacao",
+        entidadeId: publicacao.id,
+        detalhes: { negocioId, tipo, comentarioPaiId: comentarioPaiId ?? null },
+      },
+      tx,
+    );
   });
 
   revalidatePath(`/admin/solicitacoes`);

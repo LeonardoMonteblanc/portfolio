@@ -32,6 +32,8 @@ import {
 } from "@/domain/errors";
 import { revalidatePath } from "next/cache";
 import { getAdmin } from "@/lib/auth";
+import { appendLog } from "@/infrastructure/audit/audit.service";
+import { contextoDaRequisicao } from "@/lib/audit-context";
 
 const abrirVotacaoSchema = z.object({
   contestacaoId: z.string().uuid(),
@@ -45,6 +47,7 @@ export async function abrirVotacaoAction(
 ) {
   const admin = await getAdmin();
   if (!admin) return { error: "Não autorizado" };
+  const contexto = await contextoDaRequisicao("admin", admin.id);
 
   const rawData = {
     contestacaoId: formData.get("contestacaoId"),
@@ -136,6 +139,18 @@ export async function abrirVotacaoAction(
       situacaoNova: "em_votacao",
     } satisfies typeof logContestacao.$inferInsert);
 
+    await appendLog(
+      {
+        ...contexto,
+        acao: "abrir_votacao",
+        entidadeTipo: "votacao",
+        entidadeId: novaVotacao.id,
+        detalhes: { contestacaoId, quorumMinimo: adminIds.size },
+        snapshotDepois: { situacao: "em_andamento" },
+      },
+      tx,
+    );
+
     if (cont.solicitacaoOrigemId) {
       const sol = await tx.query.solicitacao.findFirst({
         where: (s, { eq }) => eq(s.id, cont.solicitacaoOrigemId!),
@@ -201,6 +216,7 @@ export async function registrarVotoAction(
 ) {
   const admin = await getAdmin();
   if (!admin) return { error: "Não autorizado" };
+  const contexto = await contextoDaRequisicao("admin", admin.id);
 
   const rawData = {
     votacaoId: formData.get("votacaoId"),
@@ -341,6 +357,17 @@ export async function registrarVotoAction(
       situacaoAnterior: "em_andamento",
       situacaoNova: "em_andamento",
     } satisfies typeof logVotacao.$inferInsert);
+
+    await appendLog(
+      {
+        ...contexto,
+        acao: "registrar_voto",
+        entidadeTipo: "votacao",
+        entidadeId: votacaoId,
+        detalhes: { escolha },
+      },
+      tx,
+    );
   });
 
   revalidatePath("/admin/solicitacoes");

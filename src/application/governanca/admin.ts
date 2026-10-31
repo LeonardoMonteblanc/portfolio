@@ -8,6 +8,8 @@ import { logSuspensaoAdmin } from "@/infrastructure/db/schema/logs";
 import { eq, asc } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { getAdmin } from "@/lib/auth";
+import { appendLog } from "@/infrastructure/audit/audit.service";
+import { contextoDaRequisicao } from "@/lib/audit-context";
 
 const suspenderAdminSchema = z.object({
   adminId: z.string().uuid(),
@@ -71,6 +73,19 @@ export async function suspenderAdminAction(
       motivo,
       ate: ate ? new Date(ate) : null,
     });
+
+    await appendLog(
+      {
+        ...(await contextoDaRequisicao("admin", admin.id)),
+        acao: "suspender_admin",
+        entidadeTipo: "administrador",
+        entidadeId: adminId,
+        detalhes: { motivo, ate: ate ?? null },
+        snapshotAntes: { ativo: true },
+        snapshotDepois: { ativo: false },
+      },
+      tx,
+    );
   });
 
   revalidatePath("/admin");
@@ -132,6 +147,19 @@ export async function reativarAdminAction(
       acao: "reativar",
       motivo,
     });
+
+    await appendLog(
+      {
+        ...(await contextoDaRequisicao("admin", admin.id)),
+        acao: "reativar_admin",
+        entidadeTipo: "administrador",
+        entidadeId: adminId,
+        detalhes: { motivo },
+        snapshotAntes: { ativo: false },
+        snapshotDepois: { ativo: true },
+      },
+      tx,
+    );
   });
 
   revalidatePath("/admin");

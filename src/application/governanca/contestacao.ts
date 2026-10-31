@@ -28,6 +28,8 @@ import {
 } from "@/domain/errors";
 import { revalidatePath } from "next/cache";
 import { getAdmin } from "@/lib/auth";
+import { appendLog } from "@/infrastructure/audit/audit.service";
+import { contextoDaRequisicao } from "@/lib/audit-context";
 
 const abrirContestacaoSchema = z.object({
   negocioId: z.string().uuid(),
@@ -133,6 +135,18 @@ export async function abrirContestacaoAction(
       acao: "criar" as const,
       situacaoNova: novaContestacao.situacao,
     } satisfies typeof logContestacao.$inferInsert);
+
+    await appendLog(
+      {
+        ...(await contextoDaRequisicao("admin", admin.id)),
+        acao: "abrir_contestacao",
+        entidadeTipo: "contestacao",
+        entidadeId: novaContestacao.id,
+        detalhes: { tipo, negocioId, solicitacaoId: solicitacaoId ?? null },
+        snapshotDepois: { situacao: novaContestacao.situacao },
+      },
+      tx,
+    );
 
     // Se for contestação oficial de aprovação, ocultar negócio do catálogo
     if (tipo === "oficial" && neg.situacaoPublicacao === "publicado") {
