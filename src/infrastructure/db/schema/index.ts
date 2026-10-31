@@ -20,3 +20,4 @@ export * from "./anexo";
 export * from "./jobs";
 export * from "./logs";
 export * from "./password_reset_tokens";
+export * from "./configuracao";

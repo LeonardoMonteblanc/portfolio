@@ -1,6 +1,11 @@
 // src/infrastructure/audit/audit.service.ts
+import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { db } from "@/infrastructure/db/client";
+import * as schema from "@/infrastructure/db/schema";
 import { logAuditoria } from "@/infrastructure/db/schema/logs";
+
+/** Aceita o client padrão ou a transação em curso. */
+type Executor = Pick<PostgresJsDatabase<typeof schema>, "insert">;
 
 export interface AuditLogInput {
   atorTipo: "admin" | "solicitante" | "sistema" | "desenvolvedor";
@@ -20,8 +25,11 @@ export interface AuditLogInput {
  * Insere log de auditoria na tabela unificada log_auditoria.
  * Deve ser chamado dentro da mesma transação da mutação de domínio.
  */
-export async function appendLog(input: AuditLogInput): Promise<void> {
-  await db.insert(logAuditoria).values({
+export async function appendLog(
+  input: AuditLogInput,
+  executor: Executor = db,
+): Promise<void> {
+  await executor.insert(logAuditoria).values({
     atorTipo: input.atorTipo,
     atorId: input.atorId ?? null,
     ipOrigem: input.ipOrigem ?? null,

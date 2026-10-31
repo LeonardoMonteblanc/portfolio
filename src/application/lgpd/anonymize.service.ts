@@ -5,7 +5,15 @@ import { solicitacao } from "@/infrastructure/db/schema/solicitacao";
 import { logAnonimizacao } from "@/infrastructure/db/schema/logs";
 import { MARCADOR_ANONIMIZADO } from "@/domain/utils/anonimizar-campos";
 import type { AtorTipo, SituacaoSolicitacao } from "@/domain/enums";
-import { and, eq, gt, inArray, isNull, notExists } from "drizzle-orm";
+import {
+  and,
+  eq,
+  exists,
+  gt,
+  isNull,
+  notExists,
+  notInArray,
+} from "drizzle-orm";
 
 /**
  * RF-072 / RNF-021 — direito de exclusão.
@@ -45,13 +53,17 @@ const CHAVES_PII_NEGOCIO = new Set([
   "valor",
 ]);
 
-/** Situações em que a solicitação ainda está em andamento (não pode ser expurgada). */
-const SITUACOES_ATIVAS: SituacaoSolicitacao[] = [
-  "recebida",
-  "em_analise",
-  "aguardando_correcao",
-  "em_fila_contestacao",
-  "em_votacao",
+/**
+ * Situações terminais da ME-01. Só elas entram no relógio de retenção:
+ * RNF-018 define "2 anos após estado terminal" (não após a criação).
+ */
+const SITUACOES_TERMINAIS: SituacaoSolicitacao[] = [
+  "aprovada",
+  "rejeitada",
+  "votacao_aprovada",
+  "votacao_rejeitada",
+  "votacao_sem_aprovacao",
+  "cancelada_por_contestacao",
 ];
 
 export interface ResultadoAnonimizacao {
@@ -235,6 +247,14 @@ export async function cronAnonimizacaoAutomatica(): Promise<ResultadoCronAnonimi
     .where(
       and(
         isNull(solicitante.anonimizadoEm),
+        // Precisa ter ao menos uma solicitação para haver o que expurgar.
+        exists(
+          db
+            .select({ id: solicitacao.id })
+            .from(solicitacao)
+            .where(eq(solicitacao.solicitanteId, solicitante.id)),
+        ),
+        // Nenhuma solicitação fora de estado terminal (fluxo em andamento).
         notExists(
           db
             .select({ id: solicitacao.id })
@@ -242,10 +262,11 @@ export async function cronAnonimizacaoAutomatica(): Promise<ResultadoCronAnonimi
             .where(
               and(
                 eq(solicitacao.solicitanteId, solicitante.id),
-                gt(solicitacao.criadoEm, limite),
+                notInArray(solicitacao.situacao, SITUACOES_TERMINAIS),
               ),
             ),
         ),
+        // Nenhuma solicitação tocada nos últimos 2 anos (contados do estado terminal).
         notExists(
           db
             .select({ id: solicitacao.id })
@@ -253,7 +274,7 @@ export async function cronAnonimizacaoAutomatica(): Promise<ResultadoCronAnonimi
             .where(
               and(
                 eq(solicitacao.solicitanteId, solicitante.id),
-                inArray(solicitacao.situacao, SITUACOES_ATIVAS),
+                gt(solicitacao.atualizadoEm, limite),
               ),
             ),
         ),
