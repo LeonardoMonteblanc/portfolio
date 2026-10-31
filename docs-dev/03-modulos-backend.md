@@ -91,3 +91,34 @@ Regras ao instrumentar uma action:
 2. grave `atorId` também na tabela de evento (`log_negocio`, `log_categoria`, ...);
 3. chame `appendLog({ ...contexto, acao, entidadeTipo, entidadeId, detalhes }, tx)`
    dentro da transação da mutação.
+
+## Ações com auditoria instrumentada (2026-10-31)
+
+| Arquivo                                            | Ações que gravam `log_auditoria`                            |
+| -------------------------------------------------- | ----------------------------------------------------------- |
+| `application/auth/login.ts`                        | `login`, `login_falha`                                      |
+| `application/solicitacoes/analise.ts`              | `decidir_solicitacao_{aprovar,reprovar,solicitar_correcao}` |
+| `application/negocios/publicar.ts`                 | `publicar_negocio`, `despublicar_negocio`                   |
+| `application/categorias/desativar.ts`              | `desativar_categoria`                                       |
+| `application/governanca/votacao.ts`                | `abrir_votacao`, `registrar_voto`                           |
+| `application/governanca/contestacao.ts`            | `abrir_contestacao`                                         |
+| `application/governanca/forum.ts`                  | `publicar_forum`                                            |
+| `application/governanca/admin.ts`                  | `suspender_admin`, `reativar_admin`                         |
+| `application/configuracao/configuracao.service.ts` | `atualizar_configuracao`                                    |
+| `application/lgpd/anonymize.service.ts`            | `anonimizar_titular`                                        |
+| `app/api/admin/imagens/[id]/moderar`               | `aprovar_imagem`, `rejeitar_imagem`                         |
+
+Para consultar no painel (quando a UI chegar):
+
+```http
+GET /api/auditoria?entidadeTipo=negocio&desde=2026-10-01&limite=50
+```
+
+Resposta: `{ registros, total }`, com `origem`, `acao`, `entidade_tipo`,
+`entidade_id`, `ator_id`, `detalhes` e `criado_em`. Exige sessão de admin;
+filtros inválidos retornam 400 com o campo problemático.
+
+> As server actions em si não têm teste automatizado porque dependem do contexto
+> de requisição do Next (`cookies()`/`headers()`). O que é testado é a camada que
+> elas chamam (`appendLog`, `consultarAuditoria`, serviços). Se precisar cobrir
+> uma action, extraia a regra para um serviço com parâmetros explícitos.
