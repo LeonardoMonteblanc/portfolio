@@ -21,6 +21,8 @@ import {
 } from "@/infrastructure/db/schema/logs";
 import { enviarEmailAnaliseSolicitacao } from "@/infrastructure/email/client";
 import { revalidatePath } from "next/cache";
+import { appendLog } from "@/infrastructure/audit/audit.service";
+import { exigirContextoAdmin } from "@/lib/audit-context";
 import { normalizarSlug } from "@/domain/utils/normalizar-slug";
 import { gerarSlugUnico } from "@/domain/utils/gerar-slug-unico";
 
@@ -52,6 +54,9 @@ export async function analisarSolicitacaoAction(
 
   const { solicitacaoId, decisao, justificativa, observacoesInternas } =
     parseResult.data;
+
+  // Autoriza a action e fornece o ator/ip para o log de auditoria.
+  const contexto = await exigirContextoAdmin();
 
   const sol = (await db.query.solicitacao.findFirst({
     where: (s, { eq }) => eq(s.id, solicitacaoId),
@@ -182,6 +187,7 @@ export async function analisarSolicitacaoAction(
       // Log de auditoria
       await tx.insert(logSolicitacaoAnalisada).values({
         atorTipo: "admin",
+        atorId: contexto.atorId,
         solicitacaoId,
         decisao: "aprovar",
         justificativa,
@@ -216,6 +222,7 @@ export async function analisarSolicitacaoAction(
       // Log de auditoria
       await tx.insert(logSolicitacaoAnalisada).values({
         atorTipo: "admin",
+        atorId: contexto.atorId,
         solicitacaoId,
         decisao: "reprovar",
         justificativa,
@@ -236,11 +243,33 @@ export async function analisarSolicitacaoAction(
       // Log de auditoria
       await tx.insert(logSolicitacaoAnalisada).values({
         atorTipo: "admin",
+        atorId: contexto.atorId,
         solicitacaoId,
         decisao: "solicitar_correcao",
         justificativa,
       });
     }
+
+    // Índice consultável de auditoria (RF-062): uma linha por decisão.
+    await appendLog(
+      {
+        ...contexto,
+        acao: `decidir_solicitacao_${decisao}`,
+        entidadeTipo: "solicitacao",
+        entidadeId: solicitacaoId,
+        detalhes: {
+          decisao,
+          justificativa: justificativa ?? null,
+          situacaoResultante: resultado.situacao,
+        },
+        snapshotAntes: { situacao: sol.situacao },
+        snapshotDepois: {
+          situacao: resultado.situacao,
+          negocioId: resultado.negocioId ?? null,
+        },
+      },
+      tx,
+    );
   });
 
   // Enviar e-mail transacional

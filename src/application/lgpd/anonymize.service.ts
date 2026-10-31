@@ -4,6 +4,7 @@ import { solicitante } from "@/infrastructure/db/schema/solicitante";
 import { solicitacao } from "@/infrastructure/db/schema/solicitacao";
 import { logAnonimizacao } from "@/infrastructure/db/schema/logs";
 import { MARCADOR_ANONIMIZADO } from "@/domain/utils/anonimizar-campos";
+import { appendLog } from "@/infrastructure/audit/audit.service";
 import type { AtorTipo, SituacaoSolicitacao } from "@/domain/enums";
 import {
   and,
@@ -169,6 +170,10 @@ export async function anonimizarSolicitante(
     Boolean(alvo[campo]),
   ).map((campo) => `solicitante.${campo}`);
 
+  // O log de auditoria preserva os valores originais (base legal: auditoria).
+  const snapshotNome = alvo.nome;
+  const snapshotEmail = alvo.email;
+
   const alteracoesNegocio = solicitacoes.map((solicitacaoAtual) => {
     const { dados, campos } = anonimizarDadosNegocio(
       solicitacaoAtual.dadosNegocioProposto,
@@ -215,6 +220,31 @@ export async function anonimizarSolicitante(
       solicitanteId,
       camposAnonimizados,
     });
+
+    // Índice consultável de auditoria (RF-062).
+    await appendLog(
+      {
+        atorTipo,
+        atorId: atorTipo === "admin" ? adminId : null,
+        ipOrigem: ipOrigem ?? undefined,
+        userAgent: userAgent ?? undefined,
+        acao: "anonimizar_titular",
+        entidadeTipo: "solicitante",
+        entidadeId: solicitanteId,
+        detalhes: {
+          camposAnonimizados,
+          solicitacoesAtualizadas: alteracoesNegocio.filter(
+            (alteracao) => alteracao.campos.length > 0,
+          ).length,
+        },
+        snapshotAntes: { nome: snapshotNome, email: snapshotEmail },
+        snapshotDepois: {
+          nome: MARCADOR_ANONIMIZADO,
+          email: MARCADOR_ANONIMIZADO,
+        },
+      },
+      tx,
+    );
   });
 
   return {

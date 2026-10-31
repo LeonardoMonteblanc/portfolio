@@ -9,16 +9,17 @@ type Executor = Pick<PostgresJsDatabase<typeof schema>, "insert">;
 
 export interface AuditLogInput {
   atorTipo: "admin" | "solicitante" | "sistema" | "desenvolvedor";
-  atorId?: string;
-  ipOrigem?: string;
-  userAgent?: string;
-  requestId?: string;
+  /** `null` = sistema/cron (sem ator humano). */
+  atorId?: string | null;
+  ipOrigem?: string | null;
+  userAgent?: string | null;
+  requestId?: string | null;
   acao: string;
   entidadeTipo: string;
-  entidadeId?: string;
+  entidadeId?: string | null;
   detalhes: Record<string, unknown>;
-  snapshotAntes?: Record<string, unknown>;
-  snapshotDepois?: Record<string, unknown>;
+  snapshotAntes?: Record<string, unknown> | null;
+  snapshotDepois?: Record<string, unknown> | null;
 }
 
 /**

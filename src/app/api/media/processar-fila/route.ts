@@ -1,14 +1,9 @@
 // src/app/api/media/processar-fila/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { getAdmin } from "@/lib/auth";
+import { autorizadoPorCron } from "@/lib/cron-auth";
 import { processarFila } from "@/application/media/processar.service";
 import { estatisticasFila } from "@/infrastructure/queue/queue.service";
-
-function autorizadoPorCron(request: NextRequest): boolean {
-  const segredo = process.env.CRON_SECRET;
-  if (!segredo) return false;
-  return request.headers.get("authorization") === `Bearer ${segredo}`;
-}
 
 async function processar(request: NextRequest) {
   if (!autorizadoPorCron(request)) {

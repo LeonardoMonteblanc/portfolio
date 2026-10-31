@@ -6,6 +6,8 @@ import { db } from "@/infrastructure/db/client";
 import { categoria, negocioCategoria } from "@/infrastructure/db/schema";
 import { eq, count } from "drizzle-orm";
 import { logCategoria } from "@/infrastructure/db/schema/logs";
+import { appendLog } from "@/infrastructure/audit/audit.service";
+import { exigirContextoAdmin } from "@/lib/audit-context";
 
 const desativarCategoriaSchema = z.object({
   id: z.string().uuid(),
@@ -22,6 +24,8 @@ export async function desativarCategoriaAction(
   }
 
   const { id } = parseResult.data;
+
+  const contexto = await exigirContextoAdmin();
 
   const atual = await db.query.categoria.findFirst({
     where: eq(categoria.id, id),
@@ -57,10 +61,21 @@ export async function desativarCategoriaAction(
 
   await db.insert(logCategoria).values({
     atorTipo: "admin",
+    atorId: contexto.atorId,
     categoriaId: id,
     acao: "desativar",
     snapshotAntes: JSON.stringify(snapshotAntes),
     snapshotDepois: JSON.stringify(atualizada[0]),
+  });
+
+  await appendLog({
+    ...contexto,
+    acao: "desativar_categoria",
+    entidadeTipo: "categoria",
+    entidadeId: id,
+    detalhes: { slug: atual.slug, nome: atual.nome },
+    snapshotAntes: { ativa: atual.ativa },
+    snapshotDepois: { ativa: false },
   });
 
   return { success: true, categoria: atualizada[0] };

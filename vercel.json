@@ -1,11 +1,7 @@
 {
   "crons": [
     {
-      "path": "/api/media/processar-fila",
-      "schedule": "0 5 * * *"
-    },
-    {
-      "path": "/api/lgpd/anonymize",
+      "path": "/api/manutencao/diaria",
       "schedule": "0 3 * * *"
     }
   ]

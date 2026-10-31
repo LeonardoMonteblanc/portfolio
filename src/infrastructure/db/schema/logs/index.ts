@@ -21,3 +21,6 @@ export * from "./log-anexo";
 export * from "./log-auditoria";
 export * from "./log-anonimizacao";
 export * from "./log-configuracao";
+export * from "./log-correcao";
+export * from "./log-reabertura";
+export * from "./log-cancelamento-fila";

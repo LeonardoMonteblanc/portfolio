@@ -1,20 +1,11 @@
 // src/app/api/lgpd/anonymize/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { getAdmin } from "@/lib/auth";
+import { autorizadoPorCron } from "@/lib/cron-auth";
 import {
   anonimizarSolicitante,
   cronAnonimizacaoAutomatica,
 } from "@/application/lgpd/anonymize.service";
-
-/**
- * Autorização de cron (Vercel Cron): Authorization: Bearer <CRON_SECRET>.
- * Sem esse segredo configurado a rota nunca aceita chamadas automáticas.
- */
-function autorizadoPorCron(request: NextRequest): boolean {
-  const segredo = process.env.CRON_SECRET;
-  if (!segredo) return false;
-  return request.headers.get("authorization") === `Bearer ${segredo}`;
-}
 
 function ipDaRequisicao(request: NextRequest): string {
   return (

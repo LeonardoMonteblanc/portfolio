@@ -14,6 +14,8 @@ import {
   logLogout,
 } from "@/infrastructure/db/schema/logs";
 import { ErroDominio } from "@/domain/errors";
+import { appendLog } from "@/infrastructure/audit/audit.service";
+import { contextoDaRequisicao } from "@/lib/audit-context";
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -55,6 +57,13 @@ export async function loginAction(prevState: unknown, formData: FormData) {
       ipOrigem: "unknown",
     });
 
+    await appendLog({
+      ...(await contextoDaRequisicao("admin")),
+      acao: "login_falha",
+      entidadeTipo: "administrador",
+      detalhes: { motivo: "admin_nao_encontrado", emailTentado: email },
+    });
+
     return { error: "E-mail ou senha incorretos." };
   }
 
@@ -74,6 +83,7 @@ export async function loginAction(prevState: unknown, formData: FormData) {
   if (!senhaValida) {
     await db.insert(logFalhaLogin).values({
       atorTipo: "admin",
+      atorId: admin.id,
       adminId: admin.id,
       emailTentado: email,
       motivo: "senha_invalida",
@@ -89,8 +99,17 @@ export async function loginAction(prevState: unknown, formData: FormData) {
   // Log sucesso
   await db.insert(logLogin).values({
     atorTipo: "admin",
+    atorId: admin.id,
     adminId: admin.id,
     ipOrigem: "unknown",
+  });
+
+  await appendLog({
+    ...(await contextoDaRequisicao("admin", admin.id)),
+    acao: "login",
+    entidadeTipo: "administrador",
+    entidadeId: admin.id,
+    detalhes: { email: admin.email },
   });
 
   return { success: true, redirect: "/admin", token };

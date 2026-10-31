@@ -11,6 +11,8 @@ import {
 } from "@/infrastructure/db/schema";
 import { eq, and } from "drizzle-orm";
 import { logNegocio } from "@/infrastructure/db/schema/logs";
+import { appendLog } from "@/infrastructure/audit/audit.service";
+import { exigirContextoAdmin } from "@/lib/audit-context";
 
 const publicarSchema = z.object({
   id: z.string().uuid(),
@@ -27,6 +29,8 @@ export async function publicarNegocioAction(
   }
 
   const { id } = parseResult.data;
+
+  const contexto = await exigirContextoAdmin();
 
   const n = await db.query.negocio.findFirst({
     where: eq(negocio.id, id),
@@ -74,10 +78,21 @@ export async function publicarNegocioAction(
 
   await db.insert(logNegocio).values({
     atorTipo: "admin",
+    atorId: contexto.atorId,
     negocioId: id,
     acao: "publicar",
     snapshotAntes: JSON.stringify(snapshotAntes),
     snapshotDepois: JSON.stringify(atualizado),
+  });
+
+  await appendLog({
+    ...contexto,
+    acao: "publicar_negocio",
+    entidadeTipo: "negocio",
+    entidadeId: id,
+    detalhes: { slug: atualizado?.slug ?? null },
+    snapshotAntes: { situacaoPublicacao: snapshotAntes.situacaoPublicacao },
+    snapshotDepois: { situacaoPublicacao: atualizado?.situacaoPublicacao },
   });
 
   return { success: true, negocio: atualizado };
@@ -94,6 +109,8 @@ export async function despublicarNegocioAction(
   }
 
   const { id } = parseResult.data;
+
+  const contexto = await exigirContextoAdmin();
 
   const n = await db.query.negocio.findFirst({ where: eq(negocio.id, id) });
   if (!n) {
@@ -114,10 +131,21 @@ export async function despublicarNegocioAction(
 
   await db.insert(logNegocio).values({
     atorTipo: "admin",
+    atorId: contexto.atorId,
     negocioId: id,
     acao: "despublicar",
     snapshotAntes: JSON.stringify(snapshotAntes),
     snapshotDepois: JSON.stringify(atualizado),
+  });
+
+  await appendLog({
+    ...contexto,
+    acao: "despublicar_negocio",
+    entidadeTipo: "negocio",
+    entidadeId: id,
+    detalhes: { slug: atualizado?.slug ?? null },
+    snapshotAntes: { situacaoPublicacao: snapshotAntes.situacaoPublicacao },
+    snapshotDepois: { situacaoPublicacao: atualizado?.situacaoPublicacao },
   });
 
   return { success: true, negocio: atualizado };
