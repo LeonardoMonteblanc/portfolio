@@ -118,6 +118,16 @@ Resposta: `{ registros, total }`, com `origem`, `acao`, `entidade_tipo`,
 `entidade_id`, `ator_id`, `detalhes` e `criado_em`. Exige sessão de admin;
 filtros inválidos retornam 400 com o campo problemático.
 
+### Webhook do Resend (F9-10)
+
+`POST /api/webhooks/resend` recebe `email.delivered`, `email.bounced`,
+`email.complained` e `email.failed`, verifica a assinatura Svix
+(`src/infrastructure/email/webhook.ts`, HMAC-SHA256 em tempo constante, janela de
+5 min contra replay) e grava em `log_comunicacao` com o resultado real. Sem
+`RESEND_WEBHOOK_SECRET` responde **503** — falha fechada, nunca aceita evento não
+autenticado. Configure a URL no painel do Resend (Webhooks) e copie o signing
+secret para a variável.
+
 ### E-mail transacional (F9-09, parcial)
 
 `src/infrastructure/email/client.ts` devolve `{ success, error }` em **todos** os
