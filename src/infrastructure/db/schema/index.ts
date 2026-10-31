@@ -17,5 +17,6 @@ export * from "./votacao";
 export * from "./voto";
 export * from "./imagem";
 export * from "./anexo";
+export * from "./jobs";
 export * from "./logs";
 export * from "./password_reset_tokens";

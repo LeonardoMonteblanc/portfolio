@@ -18,3 +18,6 @@ export * from "./log-votacao";
 export * from "./log-suspensao-admin";
 export * from "./log-imagem";
 export * from "./log-anexo";
+export * from "./log-auditoria";
+export * from "./log-anonimizacao";
+export * from "./log-configuracao";
