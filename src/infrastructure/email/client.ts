@@ -37,14 +37,19 @@ export async function enviarEmail({
   }
 }
 
+export interface ResultadoEnvio {
+  success: boolean;
+  error?: string;
+}
+
 export async function enviarEmailRecuperacaoSenha(
   email: string,
   token: string,
-): Promise<void> {
+): Promise<ResultadoEnvio> {
   const { html, text } = await import("@/infrastructure/email/templates").then(
     (m) => m.gerarEmailRecuperacaoSenha(token),
   );
-  await enviarEmail({
+  return enviarEmail({
     to: email,
     subject: "Redefinir sua senha - Diretório Comunitário",
     html,
@@ -57,11 +62,11 @@ export async function enviarEmailSugestaoCategoria(
   nomeSolicitante: string,
   sugestao: string,
   aceita: boolean,
-): Promise<void> {
+): Promise<ResultadoEnvio> {
   const { html, text } = await import("@/infrastructure/email/templates").then(
     (m) => m.gerarEmailSugestaoCategoria(nomeSolicitante, sugestao, aceita),
   );
-  await enviarEmail({
+  return enviarEmail({
     to: email,
     subject: `Sua sugestão de categoria foi ${aceita ? "aceita" : "rejeitada"} - Diretório Comunitário`,
     html,
@@ -74,11 +79,11 @@ export async function enviarEmailCorrecaoDados(
   nomeAnunciante: string,
   campos: string[],
   prazoDias: number,
-): Promise<void> {
+): Promise<ResultadoEnvio> {
   const { html, text } = await import("@/infrastructure/email/templates").then(
     (m) => m.gerarEmailCorrecaoDados(nomeAnunciante, campos, prazoDias),
   );
-  await enviarEmail({
+  return enviarEmail({
     to: email,
     subject: "Correção de dados necessária - Diretório Comunitário",
     html,
@@ -92,7 +97,7 @@ export async function enviarEmailAnaliseSolicitacao(
   nomeNegocio: string,
   decisao: "aprovar" | "reprovar" | "solicitar_correcao",
   justificativa?: string,
-): Promise<void> {
+): Promise<ResultadoEnvio> {
   const { html, text } = await import("@/infrastructure/email/templates").then(
     (m) =>
       m.gerarEmailAnaliseSolicitacao(
@@ -102,7 +107,7 @@ export async function enviarEmailAnaliseSolicitacao(
         justificativa,
       ),
   );
-  await enviarEmail({
+  return enviarEmail({
     to: email,
     subject: `Sua solicitação foi ${decisao === "aprovar" ? "aprovada" : decisao === "reprovar" ? "reprovada" : "solicitada correção"} - Diretório Comunitário`,
     html,

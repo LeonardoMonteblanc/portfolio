@@ -14,6 +14,8 @@ import {
 } from "@/infrastructure/db/schema";
 import { eq, and, sql } from "drizzle-orm";
 import { normalizarTexto } from "@/domain/utils/normalizar-texto";
+import { appendLog } from "@/infrastructure/audit/audit.service";
+import { contextoDaRequisicao } from "@/lib/audit-context";
 import {
   logSolicitacaoRecebida,
   logVinculacaoSolicitacao,
@@ -199,12 +201,28 @@ export async function criarSolicitacaoAtualizacaoAction(
       }
     }
 
-    // Log de auditoria
+    // Evento específico: o tipo correto é "atualizacao" (antes gravava
+    // "inclusao" e contaminava o relatório de origem das solicitações).
     await tx.insert(logSolicitacaoRecebida).values({
       atorTipo: "solicitante",
       solicitacaoId: novaSolicitacao.id,
-      tipo: "inclusao",
+      tipo: "atualizacao",
     });
+
+    // Índice de auditoria (RF-062). O solicitante é anônimo: sem ator_id.
+    await appendLog(
+      {
+        ...(await contextoDaRequisicao("solicitante")),
+        acao: "enviar_solicitacao_atualizacao",
+        entidadeTipo: "solicitacao",
+        entidadeId: novaSolicitacao.id,
+        detalhes: {
+          tipo: "atualizacao",
+          temSugestaoCategoria: Boolean(data.sugestaoCategoria?.trim()),
+        },
+      },
+      tx,
+    );
 
     return { solicitacao: novaSolicitacao, duplicataDetectada: false };
   });

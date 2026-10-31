@@ -19,6 +19,8 @@ import {
 } from "@/domain/errors";
 import { revalidatePath } from "next/cache";
 import { getAdmin } from "@/lib/auth";
+import { appendLog } from "@/infrastructure/audit/audit.service";
+import { contextoDaRequisicao } from "@/lib/audit-context";
 
 const FORMATOS_ACEITOS_ANEXO = [
   "image/jpeg",
@@ -129,6 +131,18 @@ export async function enviarAnexoAction(
       acao: "enviar",
       situacaoNova: "recebido",
     } satisfies typeof logAnexo.$inferInsert);
+
+    await appendLog(
+      {
+        ...(await contextoDaRequisicao("admin", admin.id)),
+        acao: "enviar_anexo",
+        entidadeTipo: "anexo",
+        entidadeId: novoAnexo.id,
+        detalhes: { solicitacaoId, mimeType, tamanhoBytes, nomeOriginal },
+        snapshotDepois: { situacao: "recebido" },
+      },
+      tx,
+    );
   });
 
   revalidatePath(`/admin/solicitacoes/${solicitacaoId}`);

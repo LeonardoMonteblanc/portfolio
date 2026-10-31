@@ -14,6 +14,8 @@ import {
   logComunicacao,
 } from "@/infrastructure/db/schema/logs";
 import { enviarEmailSugestaoCategoria } from "@/infrastructure/email/client";
+import { appendLog } from "@/infrastructure/audit/audit.service";
+import { exigirContextoAdmin } from "@/lib/audit-context";
 
 const triarSugestaoSchema = z.object({
   sugestaoId: z.string().uuid(),
@@ -40,6 +42,9 @@ export async function triarSugestaoAction(
   }
 
   const { sugestaoId, acao, justificativaInterna } = parseResult.data;
+
+  // Autoriza a action (sem isso qualquer POST direto triaria sugestões).
+  const contexto = await exigirContextoAdmin();
 
   const sugestao = (await db.query.sugestaoCategoria.findFirst({
     where: (s, { eq }) => eq(s.id, sugestaoId),
@@ -110,7 +115,7 @@ export async function triarSugestaoAction(
       .set({
         situacao: novaSituacao,
         categoriaCriadaId: categoriaCriadaId,
-        adminId: null, // TODO: obter do session/admin
+        adminId: contexto.atorId,
         justificativaInterna: acao === "rejeitar" ? justificativaInterna : null,
         triadaEm: new Date(),
       })
@@ -119,13 +124,31 @@ export async function triarSugestaoAction(
 
     if (!sugestaoAtualizada) throw new Error("Falha ao atualizar sugestão");
 
-    // Log de auditoria
+    // Evento específico + índice de auditoria (RF-062), na mesma transação.
     await tx.insert(logSugestaoCategoria).values({
       atorTipo: "admin",
+      atorId: contexto.atorId,
       sugestaoId,
       acao,
       categoriaCriadaId,
     });
+
+    await appendLog(
+      {
+        ...contexto,
+        acao: `triar_sugestao_${acao}`,
+        entidadeTipo: "sugestao_categoria",
+        entidadeId: sugestaoId,
+        detalhes: {
+          acao,
+          categoriaCriadaId,
+          justificativaInterna: justificativaInterna ?? null,
+        },
+        snapshotAntes: { situacao: "pendente" },
+        snapshotDepois: { situacao: novaSituacao },
+      },
+      tx,
+    );
 
     return { sugestao: sugestaoAtualizada, categoriaCriadaId };
   });
@@ -136,21 +159,35 @@ export async function triarSugestaoAction(
       where: (s, { eq }) => eq(s.id, sugestao.solicitacao.solicitanteId),
     });
 
+    let envioOk = false;
+    let erroEnvio: string | null = null;
+
     if (solicitante) {
-      await enviarEmailSugestaoCategoria(
-        solicitante.email,
-        solicitante.nome,
-        sugestao.textoSugerido,
-        acao === "aceitar",
-      ).catch(console.error);
+      try {
+        const envio = await enviarEmailSugestaoCategoria(
+          solicitante.email,
+          solicitante.nome,
+          sugestao.textoSugerido,
+          acao === "aceitar",
+        );
+        envioOk = envio.success;
+        erroEnvio = envio.error ?? null;
+      } catch (erro) {
+        erroEnvio = erro instanceof Error ? erro.message : "erro desconhecido";
+      }
     }
 
-    // Log de comunicação
+    if (!envioOk) {
+      console.error("[Sugestão] Falha ao enviar e-mail:", erroEnvio);
+    }
+
+    // Log de comunicação com o resultado real do envio.
     await db.insert(logComunicacao).values({
       atorTipo: "sistema",
       tipo: "sugestao_categoria",
-      destinatario: solicitante?.email || "",
-      sucesso: true,
+      destinatario: solicitante?.email ?? "",
+      sucesso: envioOk,
+      erro: erroEnvio,
     });
   }
 

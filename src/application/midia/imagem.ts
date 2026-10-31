@@ -24,6 +24,8 @@ import {
 } from "@/domain/errors";
 import { revalidatePath } from "next/cache";
 import { getAdmin } from "@/lib/auth";
+import { appendLog } from "@/infrastructure/audit/audit.service";
+import { contextoDaRequisicao } from "@/lib/audit-context";
 
 const FORMATOS_ACEITOS = ["image/jpeg", "image/png", "image/webp"];
 const TAMANHO_MAXIMO = 10 * 1024 * 1024; // 10 MB
@@ -107,6 +109,18 @@ export async function enviarImagemAction(
       acao: "enviar",
       situacaoNova: "pendente",
     });
+
+    await appendLog(
+      {
+        ...(await contextoDaRequisicao("admin", admin.id)),
+        acao: "enviar_imagem",
+        entidadeTipo: "imagem",
+        entidadeId: novaImagem.id,
+        detalhes: { negocioId, solicitacaoId: solicitacaoId ?? null, tipo },
+        snapshotDepois: { situacao: "pendente" },
+      },
+      tx,
+    );
 
     // Se houver anexo origem, atualizar anexo para 'disponibilizar'
     if (anexoOrigemId) {

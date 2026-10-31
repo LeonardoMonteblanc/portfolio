@@ -276,20 +276,35 @@ export async function analisarSolicitacaoAction(
   if (sol.solicitante) {
     const nomeNegocio = (sol.dadosNegocioProposto as Record<string, unknown>)
       .nome as string;
-    await enviarEmailAnaliseSolicitacao(
-      sol.solicitante.email,
-      sol.solicitante.nome,
-      nomeNegocio,
-      decisao,
-      justificativa,
-    ).catch(console.error);
+    // O log de comunicação registra o resultado REAL do envio: um e-mail que
+    // falhou não pode aparecer como sucesso na auditoria.
+    let envioOk = false;
+    let erroEnvio: string | null = null;
 
-    // Log de comunicação
+    try {
+      const envio = await enviarEmailAnaliseSolicitacao(
+        sol.solicitante.email,
+        sol.solicitante.nome,
+        nomeNegocio,
+        decisao,
+        justificativa,
+      );
+      envioOk = envio.success;
+      erroEnvio = envio.error ?? null;
+    } catch (erro) {
+      erroEnvio = erro instanceof Error ? erro.message : "erro desconhecido";
+    }
+
+    if (!envioOk) {
+      console.error("[Análise] Falha ao enviar e-mail:", erroEnvio);
+    }
+
     await db.insert(logComunicacao).values({
       atorTipo: "sistema",
       tipo: "analise_solicitacao",
       destinatario: sol.solicitante.email,
-      sucesso: true,
+      sucesso: envioOk,
+      erro: erroEnvio,
     });
   }
 
