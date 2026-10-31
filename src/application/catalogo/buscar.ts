@@ -10,7 +10,7 @@ import {
   horarioFuncionamento,
   negocioCategoria,
 } from "@/infrastructure/db/schema";
-import { eq, and, ilike, or, desc, asc, sql, inArray } from "drizzle-orm";
+import { eq, and, or, desc, asc, sql, inArray, exists } from "drizzle-orm";
 import { normalizarTexto } from "@/domain/utils/normalizar-texto";
 import { calcularAbertoAgora } from "@/domain/utils/calcular-aberto-agora";
 
@@ -78,20 +78,26 @@ export async function buscarNegocios(
   // Build all conditions
   const conditions: any[] = [eq(negocio.situacaoPublicacao, "publicado")];
 
-  if (params.q) {
-    const termoNormalizado = params.q
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .toLowerCase()
-      .trim();
+  if (termoNormalizado) {
+    // Busca sem sensibilidade a acento/caixa: "pao" encontra "Pão", "ze" encontra "Zé".
+    // O LIKE é aplicado sobre a coluna normalizada, então os acentos do termo
+    // (já removidos acima) casam com os acentos removidos da coluna.
+    const termoLike = `%${termoNormalizado}%`;
+    const ACENTOS = "áàâãäéèêëíìîïóòôõöúùûüçñ";
+    const SEM_ACENTO = "aaaaaeeeeiiiiooooouuuucn";
+    const colunaNormalizada = (coluna: unknown) =>
+      sql`translate(lower(${coluna}), ${ACENTOS}, ${SEM_ACENTO})`;
+
     conditions.push(
       or(
-        ilike(negocio.nome, `%${termoNormalizado}%`),
-        ilike(negocio.descricao, `%${termoNormalizado}%`),
+        sql`${colunaNormalizada(negocio.nome)} LIKE ${termoLike}`,
+        sql`${colunaNormalizada(negocio.descricao)} LIKE ${termoLike}`,
         sql`EXISTS (
-          SELECT 1 FROM ${negocioCategoria} nc
-          JOIN ${categoria} c ON ${categoria.id} = nc.categoria_id
-          WHERE nc.negocio_id = ${negocio.id} AND ${ilike(categoria.nome, `%${termoNormalizado}%`)}
+          SELECT 1
+          FROM ${negocioCategoria} nc
+          JOIN ${categoria} c ON c.id = nc.categoria_id
+          WHERE nc.negocio_id = ${negocio.id}
+            AND translate(lower(c.nome), ${ACENTOS}, ${SEM_ACENTO}) LIKE ${termoLike}
         )`,
       ),
     );
@@ -99,19 +105,33 @@ export async function buscarNegocios(
 
   if (params.categoriasIds && params.categoriasIds.length > 0) {
     conditions.push(
-      sql`EXISTS (
-        SELECT 1 FROM ${negocioCategoria} nc
-        WHERE nc.negocio_id = ${negocio.id} AND nc.categoria_id = ANY(${params.categoriasIds})
-      )`,
+      exists(
+        db
+          .select({ negocioId: negocioCategoria.negocioId })
+          .from(negocioCategoria)
+          .where(
+            and(
+              eq(negocioCategoria.negocioId, negocio.id),
+              inArray(negocioCategoria.categoriaId, params.categoriasIds),
+            ),
+          ),
+      ),
     );
   }
 
   if (params.bairros && params.bairros.length > 0) {
     conditions.push(
-      sql`EXISTS (
-        SELECT 1 FROM ${localizacao} l
-        WHERE l.negocio_id = ${negocio.id} AND l.bairro = ANY(${params.bairros})
-      )`,
+      exists(
+        db
+          .select({ negocioId: localizacao.negocioId })
+          .from(localizacao)
+          .where(
+            and(
+              eq(localizacao.negocioId, negocio.id),
+              inArray(localizacao.bairro, params.bairros),
+            ),
+          ),
+      ),
     );
   }
 
@@ -138,10 +158,9 @@ export async function buscarNegocios(
     .where(and(...conditions))
     .orderBy(orderByMap[params.ordenacao || "relevancia"]);
 
-  const totalResult = await db.$count(
-    negocio,
-    eq(negocio.situacaoPublicacao, "publicado"),
-  );
+  // O total precisa respeitar os mesmos filtros da listagem (RF-005 / F4-07):
+  // antes contava todos os publicados e a paginação ficava incorreta ao filtrar.
+  const totalResult = await db.$count(negocio, and(...conditions));
   const negociosBase = await query
     .limit(params.porPagina || 20)
     .offset(((params.pagina || 1) - 1) * (params.porPagina || 20));
@@ -394,9 +413,21 @@ export async function listarCategoriasAtivas() {
   });
 }
 
-export async function listarBairrosComNegocios() {
+export interface BairroComTotal {
+  bairro: string;
+  total: number;
+}
+
+/**
+ * Bairros com ao menos um negócio publicado, com contagem por bairro.
+ * Alimenta o filtro de bairro do catálogo (RF-004 / F4-06).
+ */
+export async function listarBairrosComNegocios(): Promise<BairroComTotal[]> {
   const result = await db
-    .selectDistinct({ bairro: localizacao.bairro })
+    .select({
+      bairro: localizacao.bairro,
+      total: sql<number>`count(*)::int`,
+    })
     .from(localizacao)
     .innerJoin(negocio, eq(negocio.id, localizacao.negocioId))
     .where(
@@ -405,6 +436,28 @@ export async function listarBairrosComNegocios() {
         sql`${localizacao.bairro} IS NOT NULL`,
       ),
     )
+    .groupBy(localizacao.bairro)
     .orderBy(asc(localizacao.bairro));
-  return result.map((r) => r.bairro).filter((b): b is string => b !== null);
+
+  return result
+    .filter((r): r is { bairro: string; total: number } => r.bairro !== null)
+    .map((r) => ({ bairro: r.bairro, total: Number(r.total) }));
+}
+
+export interface NegocioSitemap {
+  slug: string;
+  atualizadoEm: Date;
+}
+
+/**
+ * Negócios publicados, no formato mínimo para o sitemap (RF-066 / F4-12).
+ */
+export async function listarNegociosPublicadosParaSitemap(): Promise<
+  NegocioSitemap[]
+> {
+  return db
+    .select({ slug: negocio.slug, atualizadoEm: negocio.atualizadoEm })
+    .from(negocio)
+    .where(eq(negocio.situacaoPublicacao, "publicado"))
+    .orderBy(desc(negocio.atualizadoEm));
 }
