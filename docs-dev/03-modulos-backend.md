@@ -118,6 +118,13 @@ Resposta: `{ registros, total }`, com `origem`, `acao`, `entidade_tipo`,
 `entidade_id`, `ator_id`, `detalhes` e `criado_em`. Exige sessão de admin;
 filtros inválidos retornam 400 com o campo problemático.
 
+### E-mail transacional (F9-09, parcial)
+
+`src/infrastructure/email/client.ts` devolve `{ success, error }` em **todos** os
+envios. Análise de solicitação e triagem de sugestão gravam `log_comunicacao`
+com o resultado real — antes registravam `sucesso: true` mesmo quando o envio
+falhava, escondendo falha de entrega.
+
 > As server actions em si não têm teste automatizado porque dependem do contexto
 > de requisição do Next (`cookies()`/`headers()`). O que é testado é a camada que
 > elas chamam (`appendLog`, `consultarAuditoria`, serviços). Se precisar cobrir
