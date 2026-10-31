@@ -1,12 +1,12 @@
 {
   "crons": [
     {
-      "path": "/api/lgpd/anonymize",
-      "schedule": "0 3 * * *"
+      "path": "/api/media/processar-fila",
+      "schedule": "0 5 * * *"
     },
     {
-      "path": "/api/media/processar-fila",
-      "schedule": "* * * * *"
+      "path": "/api/lgpd/anonymize",
+      "schedule": "0 3 * * *"
     }
   ]
 }
