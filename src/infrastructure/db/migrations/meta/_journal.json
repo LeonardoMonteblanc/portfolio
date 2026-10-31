@@ -78,6 +78,27 @@
       "when": 1793413255097,
       "tag": "0010_left_wither",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1793415209586,
+      "tag": "0011_broken_guardian",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1793467459711,
+      "tag": "0012_oval_secret_warriors",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1793467460711,
+      "tag": "0013_voto_escolha",
+      "breakpoints": true
     }
   ]
 }

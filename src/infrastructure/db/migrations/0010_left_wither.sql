@@ -1,4 +1,4 @@
-CREATE TABLE "imagem" (
+CREATE TABLE IF NOT EXISTS "imagem" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"negocio_id" uuid NOT NULL,
 	"solicitacao_id" uuid,
@@ -10,7 +10,7 @@ CREATE TABLE "imagem" (
 	"criada_em" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "anexo" (
+CREATE TABLE IF NOT EXISTS "anexo" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"solicitacao_id" uuid NOT NULL,
 	"arquivo_url" text NOT NULL,
@@ -21,7 +21,7 @@ CREATE TABLE "anexo" (
 	"criada_em" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "log_imagem" (
+CREATE TABLE IF NOT EXISTS "log_imagem" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"ator_tipo" varchar(20) NOT NULL,
 	"ator_id" uuid,
@@ -36,7 +36,7 @@ CREATE TABLE "log_imagem" (
 	"justificativa" text
 );
 --> statement-breakpoint
-CREATE TABLE "log_anexo" (
+CREATE TABLE IF NOT EXISTS "log_anexo" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"ator_tipo" varchar(20) NOT NULL,
 	"ator_id" uuid,
@@ -50,7 +50,7 @@ CREATE TABLE "log_anexo" (
 	"situacao_nova" varchar(20)
 );
 --> statement-breakpoint
-CREATE TABLE "password_reset_token" (
+CREATE TABLE IF NOT EXISTS "password_reset_token" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"admin_id" uuid NOT NULL,
 	"hash" varchar(64) NOT NULL,
@@ -58,16 +58,40 @@ CREATE TABLE "password_reset_token" (
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-ALTER TABLE "health_check" DISABLE ROW LEVEL SECURITY;--> statement-breakpoint
-DROP TABLE "health_check" CASCADE;--> statement-breakpoint
-ALTER TABLE "forum_publicacao" DROP CONSTRAINT "forum_publicacao_comentario_pai_id_forum_publicacao_id_fk";
+ALTER TABLE "votacao" ALTER COLUMN "situacao" SET DEFAULT 'em_andamento';
 --> statement-breakpoint
-ALTER TABLE "votacao" ALTER COLUMN "situacao" SET DEFAULT 'em_andamento';--> statement-breakpoint
-ALTER TABLE "solicitacao" ADD COLUMN "origem_decisao" varchar(20);--> statement-breakpoint
-ALTER TABLE "forum_publicacao" ADD COLUMN "tipo" varchar(20) DEFAULT 'comentario' NOT NULL;--> statement-breakpoint
-ALTER TABLE "voto" ADD COLUMN "escolha" varchar(20) NOT NULL;--> statement-breakpoint
-ALTER TABLE "imagem" ADD CONSTRAINT "imagem_negocio_id_negocio_id_fk" FOREIGN KEY ("negocio_id") REFERENCES "public"."negocio"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "imagem" ADD CONSTRAINT "imagem_solicitacao_id_solicitacao_id_fk" FOREIGN KEY ("solicitacao_id") REFERENCES "public"."solicitacao"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "imagem" ADD CONSTRAINT "imagem_anexo_origem_id_anexo_id_fk" FOREIGN KEY ("anexo_origem_id") REFERENCES "public"."anexo"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "anexo" ADD CONSTRAINT "anexo_solicitacao_id_solicitacao_id_fk" FOREIGN KEY ("solicitacao_id") REFERENCES "public"."solicitacao"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "voto" DROP COLUMN "valor";
+ALTER TABLE "solicitacao" ADD COLUMN IF NOT EXISTS "origem_decisao" varchar(20);
+--> statement-breakpoint
+ALTER TABLE "forum_publicacao" ADD COLUMN IF NOT EXISTS "tipo" varchar(20) DEFAULT 'comentario' NOT NULL;
+--> statement-breakpoint
+ALTER TABLE "voto" ADD COLUMN IF NOT EXISTS "escolha" varchar(20) NOT NULL;
+--> statement-breakpoint
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'imagem_negocio_id_negocio_id_fk') THEN
+    ALTER TABLE "imagem" ADD CONSTRAINT "imagem_negocio_id_negocio_id_fk" FOREIGN KEY ("negocio_id") REFERENCES "public"."negocio"("id") ON DELETE no action ON UPDATE no action;
+  END IF;
+END $$
+--> statement-breakpoint
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'imagem_solicitacao_id_solicitacao_id_fk') THEN
+    ALTER TABLE "imagem" ADD CONSTRAINT "imagem_solicitacao_id_solicitacao_id_fk" FOREIGN KEY ("solicitacao_id") REFERENCES "public"."solicitacao"("id") ON DELETE no action ON UPDATE no action;
+  END IF;
+END $$
+--> statement-breakpoint
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'imagem_anexo_origem_id_anexo_id_fk') THEN
+    ALTER TABLE "imagem" ADD CONSTRAINT "imagem_anexo_origem_id_anexo_id_fk" FOREIGN KEY ("anexo_origem_id") REFERENCES "public"."anexo"("id") ON DELETE no action ON UPDATE no action;
+  END IF;
+END $$
+--> statement-breakpoint
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'anexo_solicitacao_id_solicitacao_id_fk') THEN
+    ALTER TABLE "anexo" ADD CONSTRAINT "anexo_solicitacao_id_solicitacao_id_fk" FOREIGN KEY ("solicitacao_id") REFERENCES "public"."solicitacao"("id") ON DELETE no action ON UPDATE no action;
+  END IF;
+END $$
+--> statement-breakpoint
+ALTER TABLE "voto" DROP COLUMN IF EXISTS "valor";
