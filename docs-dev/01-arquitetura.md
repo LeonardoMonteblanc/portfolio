@@ -64,6 +64,17 @@ ME-01 (solicitação) e ME-02 (publicação) são funções puras em
 4. `POST /api/admin/imagens/[id]/moderar` aprova/rejeita e grava
    `log_imagem` + `log_auditoria`.
 
+### Auditoria (RF-062 / RF-063)
+
+1. Cada caso de uso grava o evento na sua tabela específica (`log_negocio`,
+   `log_solicitacao_analisada`, ...) **e** uma linha em `log_auditoria` com ator,
+   IP e snapshots antes/depois — sempre dentro da mesma transação.
+2. A view materializada `vw_auditoria_consolidada` une as 24 tabelas em um
+   formato único (`criado_em`, `ator`, `acao`, `entidade_tipo`, `entidade_id`,
+   `detalhes`). Consultas usam `consultarAuditoria()`.
+3. O refresh é diário pelo cron `/api/manutencao/diaria` (ou manual em
+   `/api/auditoria/refresh`).
+
 ### LGPD (direito de exclusão)
 
 1. `POST /api/lgpd/anonymize` (admin) ou cron diário com `CRON_SECRET`.

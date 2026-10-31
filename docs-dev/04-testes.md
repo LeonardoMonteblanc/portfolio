@@ -94,3 +94,18 @@ Boas práticas que os testes existentes seguem:
 de integração ainda **não** estão no CI porque precisam de serviço Postgres;
 para incluí-los, adicione um `services: postgres` no job e rode
 `pnpm test:integration` com `TEST_DATABASE_URL`.
+
+## Suíte de auditoria (adicionada em 2026-10-31)
+
+`tests/integration/auditoria.test.ts` cobre RF-062/RF-063:
+
+- a view materializada é `relkind = 'm'` e tem índice único (pré-requisito de
+  `REFRESH ... CONCURRENTLY`);
+- eventos de tabelas diferentes aparecem no mesmo formato (`origem`, `acao`,
+  `entidade_tipo`, `entidade_id`, `detalhes`);
+- filtros por origem, entidade e ator;
+- `appendLog` alimenta a view;
+- uma alteração de configuração gera **duas** linhas (evento + índice de auditoria);
+- paginação por `limite`/`deslocamento`, do mais recente para o mais antigo.
+
+Total atual: **201 unitários + 34 de integração**.

@@ -51,6 +51,11 @@ Cada caso de uso é um arquivo pequeno e explícito. Server actions começam com
 5. **Nada de stub.** `return []`, `TODO`, `catch {}` ou string "em breve"
    escondem falha e quebram contratos de teste.
 6. **Documente o porquê** no topo do módulo quando a regra não for óbvia.
+7. **Toda action administrativa começa com `exigirContextoAdmin()`**
+   (`src/lib/audit-context.ts`): valida a sessão **e** devolve ator/IP para o
+   `appendLog`. Confiar só no layout `/admin` não protege um POST direto.
+8. **Grave o ator também na tabela de evento** (`atorId`), não apenas no
+   `log_auditoria`: é o que a view consolidada usa como fallback.
 
 ## Rotas de API (não públicas)
 
@@ -63,3 +68,26 @@ Cada caso de uso é um arquivo pequeno e explícito. Server actions começam com
 | `POST /api/admin/imagens/[id]/moderar`                    | admin                  | moderação                  |
 | `POST /api/lgpd/anonymize`, `GET` (cron)                  | admin / `CRON_SECRET`  | LGPD                       |
 | `GET /api/test/*`                                         | admin                  | diagnóstico (exige sessão) |
+
+## Auditoria (adicionado em 2026-10-31)
+
+| Módulo                                       | Responsabilidade                            | Entradas                                       |
+| -------------------------------------------- | ------------------------------------------- | ---------------------------------------------- |
+| `application/auditoria/auditoria.service.ts` | consulta a view consolidada e refresh       | `consultarAuditoria`, `atualizarViewAuditoria` |
+| `lib/audit-context.ts`                       | guarda de sessão + ator/IP para auditoria   | `exigirContextoAdmin`, `contextoDaRequisicao`  |
+| `lib/cron-auth.ts`                           | valida `Authorization: Bearer $CRON_SECRET` | `autorizadoPorCron`                            |
+
+Rotas relacionadas:
+
+| Rota                              | Auth                   | Função                                                           |
+| --------------------------------- | ---------------------- | ---------------------------------------------------------------- |
+| `GET/POST /api/auditoria/refresh` | `CRON_SECRET` ou admin | `REFRESH MATERIALIZED VIEW CONCURRENTLY`                         |
+| `GET/POST /api/manutencao/diaria` | `CRON_SECRET` ou admin | expurgo LGPD + refresh da view + fila de mídia + limpeza de jobs |
+
+Regras ao instrumentar uma action:
+
+1. comece com `const contexto = await exigirContextoAdmin()` — valida a sessão e
+   fornece ator/IP (confiar só no layout `/admin` não protege um POST direto);
+2. grave `atorId` também na tabela de evento (`log_negocio`, `log_categoria`, ...);
+3. chame `appendLog({ ...contexto, acao, entidadeTipo, entidadeId, detalhes }, tx)`
+   dentro da transação da mutação.

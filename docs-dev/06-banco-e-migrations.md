@@ -46,7 +46,11 @@ O que foi feito:
 - `0012` criou de fato `job`, `log_anonimizacao` e `log_configuracao`;
 - `0013` alinhou `voto` ao domínio (o banco tinha `valor NOT NULL` e nenhuma
   coluna `escolha`, então **nenhum voto podia ser gravado**);
-- `0014` criou `configuracao`.
+- `0014` criou `configuracao`;
+- `0015` criou a view materializada `vw_auditoria_consolidada` e — descoberta no
+  caminho — regularizou três tabelas que existiam **só** em produção, criadas por
+  script ad-hoc e sem schema Drizzle: `log_correcao`, `log_reabertura` e
+  `log_cancelamento_fila`. Sem elas, um banco novo não conseguia construir a view.
 
 Resultado: o banco tem hoje 15 migrations aplicadas e a suíte de integração sobe
 o schema inteiro do zero.
@@ -98,3 +102,17 @@ Não há rollback automático. O caminho seguro é:
 2. restaurar o backup do Neon (branch/point-in-time) se houver perda de dados.
 
 Por isso: mudanças destrutivas exigem backup antes e revisão de quem revisa.
+
+### 0015 — view de auditoria e tabelas órfãs
+
+`0015_vw_auditoria_consolidada.sql` cria a view materializada com
+`UNION ALL` sobre as 24 tabelas de log. Ao testá-la em um banco novo apareceu
+um problema que só existia em produção: **três tabelas de log não tinham schema
+nem migration** — `log_correcao`, `log_reabertura` e `log_cancelamento_fila`
+haviam sido criadas por script ad-hoc. A migration passou a criá-las
+(`IF NOT EXISTS`) e os schemas Drizzle foram adicionados em
+`src/infrastructure/db/schema/logs/`.
+
+Lição: se um objeto existe em produção mas não nas migrations, o projeto **não é
+reprodutível**. A suíte de integração (que sobe o banco do zero) é o detector
+desse tipo de drift.
