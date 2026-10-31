@@ -19,6 +19,12 @@ const envSchema = z.object({
   UPSTASH_REDIS_URL: z.string().url().optional().or(z.literal("")),
   UPSTASH_REDIS_TOKEN: z.string().min(1).optional().or(z.literal("")),
   SENTRY_DSN: z.string().url().optional().or(z.literal("")),
+  // Backup (F9-11). `R2_BACKUP_BUCKET` precisa ser um bucket PRIVADO: o bucket
+  // de imagens é público, e um dump ali dentro exporia a base inteira.
+  R2_BACKUP_BUCKET: z.string().min(1).optional(),
+  BACKUP_DIRETORIO: z.string().min(1).optional(),
+  // Webhook de alerta (Slack/Discord/genérico). Canal 2 de 3 do RNF-031.
+  ALERTA_WEBHOOK_URL: z.string().url().optional().or(z.literal("")),
   ADMIN_EMAIL_INSTITUCIONAL: z.string().email().optional(),
   ADMIN_EMAIL_DPO: z.string().email().optional(),
 });
@@ -46,6 +52,9 @@ function validateEnv() {
       UPSTASH_REDIS_URL: process.env.UPSTASH_REDIS_URL,
       UPSTASH_REDIS_TOKEN: process.env.UPSTASH_REDIS_TOKEN,
       SENTRY_DSN: process.env.SENTRY_DSN,
+      R2_BACKUP_BUCKET: process.env.R2_BACKUP_BUCKET,
+      BACKUP_DIRETORIO: process.env.BACKUP_DIRETORIO,
+      ALERTA_WEBHOOK_URL: process.env.ALERTA_WEBHOOK_URL,
       ADMIN_EMAIL_INSTITUCIONAL: process.env.ADMIN_EMAIL_INSTITUCIONAL,
       ADMIN_EMAIL_DPO: process.env.ADMIN_EMAIL_DPO,
     });

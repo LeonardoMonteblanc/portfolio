@@ -29,19 +29,28 @@ pelo painel depois.
 
 ### 4. Serviços externos
 
-| Serviço       | O que configurar                                                           |
-| ------------- | -------------------------------------------------------------------------- |
-| Neon          | `DATABASE_URL` (pooled)                                                    |
-| Resend        | verificar o domínio (SPF/DKIM) e usar um `RESEND_FROM_EMAIL` desse domínio |
-| Cloudflare R2 | bucket + credenciais + `R2_PUBLIC_URL`                                     |
-| Upstash Redis | rate limit (opcional, mas recomendado em produção)                         |
-| Sentry        | DSN (opcional)                                                             |
-| Vercel        | `CRON_SECRET` e as demais variáveis                                        |
+| Serviço       | O que configurar                                                               |
+| ------------- | ------------------------------------------------------------------------------ |
+| Neon          | `DATABASE_URL` (pooled)                                                        |
+| Resend        | verificar o domínio (SPF/DKIM) e usar um `RESEND_FROM_EMAIL` desse domínio     |
+| Cloudflare R2 | bucket + credenciais + `R2_PUBLIC_URL`                                         |
+| Upstash Redis | rate limit (opcional, mas recomendado em produção)                             |
+| Sentry        | DSN (opcional)                                                                 |
+| Vercel        | `CRON_SECRET` e as demais variáveis                                            |
+| Cloudflare R2 | **bucket privado** extra para backup (`R2_BACKUP_BUCKET`), separado do público |
+| Webhook       | `ALERTA_WEBHOOK_URL` (Slack/Discord) para receber alerta de falha              |
 
 > O plano **Hobby** da Vercel só permite 1 execução por dia por cron (máx. 2).
-> O `vercel.json` já está ajustado para esse limite: expurgo LGPD diário e fila
-> de mídia diária (a fila também roda sob demanda em
-> `POST /api/media/processar-fila`).
+> O `vercel.json` usa exatamente as duas: `0 3 * * *`
+> (`/api/manutencao/diaria`: expurgo LGPD, refresh da view, fila de mídia,
+> limpeza de jobs) e `30 3 * * *` (`/api/manutencao/backup`).
+>
+> ⚠️ **O bucket de backup não pode ser o mesmo das imagens.** O bucket de imagem
+> é público e os nomes dos arquivos de backup são previsíveis
+> (`backups/AAAA-MM-DD/...`): um dump ali dentro publicaria a base inteira.
+> Crie um bucket privado, defina `R2_BACKUP_BUCKET` e confirme que
+> `GET /api/manutencao/backup` responde 200 — sem isso ele responde 503 de
+> propósito (falha fechada).
 
 ### 5. Ajustes de operação
 
@@ -50,6 +59,18 @@ pelo painel depois.
 - [ ] Documentos legais (`documento_termo`): termos de uso, política de
       privacidade e tratamento de dados precisam ser **revistos juridicamente**
       para a sua jurisdição. Não reaproveite os textos sem revisão.
+
+### 5.1 Backup e alertas (não pule)
+
+1. crie o bucket privado no R2 e defina `R2_BACKUP_BUCKET`;
+2. defina `ALERTA_WEBHOOK_URL` e `SENTRY_DSN` (e-mail já sai pelo Resend para
+   `ADMIN_EMAIL_INSTITUCIONAL`) — são os 3 canais do RNF-031;
+3. rode um backup manual e **confira o destino**:
+   `pnpm db:backup --r2` (ou `--dir D:\backups` se ainda não houver R2);
+4. faça o drill de restauração uma vez, antes de precisar dele:
+   `pnpm db:restore --db postgresql://dev:dev@localhost:5432/drill --limpar --confirmar`
+   (o script recusa host remoto de propósito);
+5. ajuste `backup_retencao_dias` em `configuracao` (padrão 30 dias).
 
 ### 6. O que NÃO muda
 

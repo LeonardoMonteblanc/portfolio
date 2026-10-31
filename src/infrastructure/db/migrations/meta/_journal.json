@@ -113,6 +113,13 @@
       "when": 1793469628276,
       "tag": "0015_vw_auditoria_consolidada",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1793473285479,
+      "tag": "0016_log_alerta",
+      "breakpoints": true
     }
   ]
 }

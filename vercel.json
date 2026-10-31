@@ -3,6 +3,10 @@
     {
       "path": "/api/manutencao/diaria",
       "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/manutencao/backup",
+      "schedule": "30 3 * * *"
     }
   ]
 }

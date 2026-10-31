@@ -234,3 +234,33 @@ Estado verificado em produção (`https://guiabg.com.br`): `/`, `/catalogo`, `/c
 - Ainda sem auditoria explícita: `solicitacoes/atualizar.ts` (correções),
   `solicitacoes/triar-sugestao.ts` (sugestões) e `midia/imagem.ts`/`anexo.ts`
   (esses já gravam log de evento, mas não o índice `log_auditoria`).
+
+### 9.8 Backup diário e alertas em 3 canais (31/10, quinta parte)
+
+- **F9-11 / RF-068 / RNF-025 / RNF-031.** Novo módulo `application/backup`:
+  exporta todas as tabelas base em `.ndjson.gz` (uma por tabela) + `manifesto.json`
+  com `sha256` e contagem por tabela. Rota `/api/manutencao/backup` no cron
+  `30 3 * * *` (segundo e último cron do plano Hobby) e retenção configurável em
+  `configuracao.backup_retencao_dias` (padrão 30 dias).
+- **Destino separado do bucket público.** `R2_BACKUP_BUCKET` é variável própria;
+  sem ela a rota responde **503** em vez de gravar dump no bucket público de
+  imagens (nomes previsíveis = vazamento da base).
+- **Restauração testada de verdade (RNF-027).** `application/backup/restaurar.ts`
+  confere o hash de cada arquivo, suspende as 25 FKs, insere com
+  `jsonb_populate_recordset`, recria as FKs e compara contagem tabela a tabela.
+  Scripts: `pnpm db:backup` e `pnpm db:restore` (este recusa host remoto).
+- **Drill executado com dados de produção:** 46 tabelas / 476 linhas exportadas,
+  restauradas em um banco local criado do zero — zero divergências.
+- **Alertas (`infrastructure/alertas`):** e-mail (Resend), webhook genérico e
+  Sentry, com resultado por canal em `log_alerta`. Canal não configurado conta
+  como `pulado`, nunca como sucesso. Ligado na falha do backup e na manutenção
+  diária parcial.
+- **Migration 0016:** `log_alerta` (fora da view de auditoria de propósito —
+  alerta é telemetria, não ação sobre dado pessoal).
+- **Dois defeitos encontrados pelos testes:** `destinoDiretorio` usava `join` e
+  quebrava com caminho absoluto (`--dir C:\backups`), e `ajustarSequencias` tentava
+  `setval` nas sequências do schema `drizzle` (`__drizzle_migrations`), falhando a
+  restauração. Ambos corrigidos.
+- **Testes:** unitários **216** (9 novos de ordem/retenção), integração **36**
+  (2 novos: manifesto íntegro e restauração completa com recusa de arquivo
+  corrompido).

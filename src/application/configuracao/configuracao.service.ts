@@ -73,6 +73,11 @@ export const CONFIGURACOES = {
     padrao: "5",
     descricao: "Intervalo de atualização da view de auditoria (RF-063).",
   },
+  backup_retencao_dias: {
+    schema: z.coerce.number().int().min(7).max(365),
+    padrao: "30",
+    descricao: "Por quantos dias os backups diários são mantidos (RF-068).",
+  },
 } as const;
 
 export type ChaveConfiguracao = keyof typeof CONFIGURACOES;

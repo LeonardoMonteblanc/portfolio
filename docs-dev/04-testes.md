@@ -4,8 +4,8 @@
 
 | Camada     | Onde                                | Banco         | Velocidade        | O que prova                                                    |
 | ---------- | ----------------------------------- | ------------- | ----------------- | -------------------------------------------------------------- |
-| Unitário   | `tests/unit/**`, `src/**/*.spec.ts` | não           | ~3 s (201 testes) | regras RN01–RN38, máquinas de estado ME-01..ME-08, utilitários |
-| Integração | `tests/integration/**`              | Postgres real | ~25 s (28 testes) | SQL, transações, constraints, idempotência                     |
+| Unitário   | `tests/unit/**`, `src/**/*.spec.ts` | não           | ~2 s (216 testes) | regras RN01–RN38, máquinas de estado ME-01..ME-08, utilitários |
+| Integração | `tests/integration/**`              | Postgres real | ~50 s (36 testes) | SQL, transações, constraints, idempotência                     |
 
 E2E (Playwright) ainda **não** está configurado — é o próximo passo de qualidade.
 
@@ -57,6 +57,8 @@ pnpm test:integration
 | `lgpd.test.ts`         | máscara de nome/email/telefone; PII dentro do jsonb (e preservação de descrição/bairro/horários); `log_anonimizacao`; idempotência; solicitante inexistente; expurgo só de estado terminal com +2 anos; solicitante sem solicitação |
 | `fila.test.ts`         | reivindicação com SKIP LOCKED; concorrência (dois workers, jobs distintos); agendamento futuro; conclusão; backoff e limite de tentativas; estatísticas; limpeza de jobs antigos                                                    |
 | `configuracao.test.ts` | padrões quando vazio; seed idempotente; validação por chave (e-mail, número, lista); persistência; `log_configuracao` + `log_auditoria` na mesma transação; no-op quando o valor não muda                                           |
+| `auditoria.test.ts`    | view materializada com índice único; consolidação entre tabelas; filtros; log do caso de uso aparece na view; evento + índice; paginação                                                                                            |
+| `backup.test.ts`       | backup completo com manifesto íntegro (sha256 + contagem por arquivo); restauração em banco novo criado do zero; recusa de arquivo corrompido; FKs e contagens conferidas depois do restore                                         |
 
 ## Como escrever um teste de integração
 

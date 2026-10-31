@@ -14,3 +14,11 @@ if (!connectionString) {
 
 const client = postgres(connectionString, { prepare: false });
 export const db = drizzle(client, { schema });
+
+/**
+ * Cliente cru (postgres.js) para o que o Drizzle não cobre: cursores de
+ * exportação do backup, DDL de manutenção e consultas ao catálogo do Postgres.
+ * Regra: nada de SQL montado com valor de usuário por aqui — só nomes de
+ * tabela vindos do catálogo, sempre citados com aspas duplas.
+ */
+export const sqlBruto = client;

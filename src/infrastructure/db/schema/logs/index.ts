@@ -24,3 +24,4 @@ export * from "./log-configuracao";
 export * from "./log-correcao";
 export * from "./log-reabertura";
 export * from "./log-cancelamento-fila";
+export * from "./log-alerta";

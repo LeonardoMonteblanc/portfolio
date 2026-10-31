@@ -64,6 +64,9 @@ Desktop.ini
 *.log
 /logs/
 
+# Backups locais (dumps contêm dados pessoais — nunca versionar)
+/backups/
+
 # Turbo
 .turbo
 

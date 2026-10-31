@@ -6,6 +6,7 @@ import { cronAnonimizacaoAutomatica } from "@/application/lgpd/anonymize.service
 import { atualizarViewAuditoria } from "@/application/auditoria/auditoria.service";
 import { processarFila } from "@/application/media/processar.service";
 import { limparJobsAntigos } from "@/infrastructure/queue/queue.service";
+import { dispararAlerta } from "@/infrastructure/alertas/alerta.service";
 
 /**
  * Manutenção diária (Vercel Cron → `0 3 * * *`).
@@ -51,6 +52,19 @@ export async function GET(request: NextRequest) {
   await executar("atualizarViewAuditoria", () => atualizarViewAuditoria());
   await executar("processarFilaMidia", () => processarFila());
   await executar("limparJobsAntigos", () => limparJobsAntigos());
+
+  if (erros.length > 0) {
+    // RNF-031: falha de rotina noturna precisa chegar em alguém, não só no log.
+    await dispararAlerta({
+      tipo: "manutencao_diaria_falhou",
+      severidade: "aviso",
+      mensagem: `${erros.length} etapa(s) da manutenção diária falharam.`,
+      contexto: {
+        erros: erros.map((erro) => `${erro.etapa}: ${erro.erro}`).join(" | "),
+        origem: porCron ? "cron" : "admin",
+      },
+    });
+  }
 
   return NextResponse.json(
     {

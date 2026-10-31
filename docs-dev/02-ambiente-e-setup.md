@@ -33,6 +33,9 @@ sobe** (é proposital — falha cedo em vez de erro estranho em runtime).
 | `SENTRY_DSN`                                                                  | opcional                      | observabilidade                                                                         |
 | `ADMIN_EMAIL_INSTITUCIONAL`, `ADMIN_EMAIL_DPO`                                | opcional                      | endereços exibidos ao público / LGPD                                                    |
 | `CRON_SECRET`                                                                 | opcional (necessário p/ cron) | segredo enviado pelo Vercel Cron no header `Authorization`                              |
+| `R2_BACKUP_BUCKET`                                                            | opcional (produção)           | bucket **privado** dos backups; sem ele `/api/manutencao/backup` responde 503           |
+| `ALERTA_WEBHOOK_URL`                                                          | opcional                      | canal 2 de 3 dos alertas (Slack/Discord/genérico)                                       |
+| `BACKUP_DIRETORIO`                                                            | opcional (dev)                | destino em disco quando não há R2 (não use na Vercel: o disco é efêmero)                |
 | `NEXT_PUBLIC_SITE_URL`                                                        | opcional                      | URL canônica usada em sitemap/Open Graph (padrão: `https://guiabg.com.br`)              |
 
 > ⚠️ **Cuidado com o alvo do banco.** Neste repositório o `.env.local` de
@@ -50,6 +53,8 @@ pnpm lint
 pnpm test:unit       # domínio, sem banco
 pnpm test:integration # cria/recria o banco diretorio_test e roda as migrations
 pnpm build
+pnpm db:backup       # backup agora, em ./backups (ou --dir/--r2)
+pnpm db:restore      # drill de restauração contra banco LOCAL (ver 06)
 ```
 
 ## Seeds
@@ -58,7 +63,7 @@ pnpm build
 | ------------------------- | ---------------------------------------------- |
 | `pnpm db:seed:admin`      | primeiro administrador (senha temporária)      |
 | `pnpm db:seed:categorias` | categorias oficiais                            |
-| `pnpm db:seed:config`     | os 10 parâmetros operacionais (`configuracao`) |
+| `pnpm db:seed:config`     | os 11 parâmetros operacionais (`configuracao`) |
 
 Todos são idempotentes na medida do possível: rodar de novo não duplica dados.
 

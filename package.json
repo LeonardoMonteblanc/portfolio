@@ -20,6 +20,8 @@
     "db:seed:config": "tsx src/scripts/seed-configuracao.ts",
     "db:seed:completo": "tsx scripts/seed-completo.ts",
     "db:update:admin-token": "tsx src/scripts/update-admin-token-version.ts",
+    "db:backup": "tsx --env-file-if-exists=.env.local src/scripts/backup.ts",
+    "db:restore": "tsx --env-file-if-exists=.env.local src/scripts/restaurar-backup.ts",
     "db:studio": "drizzle-kit studio",
     "prepare": "husky",
     "format": "prettier --write .",

@@ -83,6 +83,7 @@ Rotas relacionadas:
 | --------------------------------- | ---------------------- | ---------------------------------------------------------------- |
 | `GET/POST /api/auditoria/refresh` | `CRON_SECRET` ou admin | `REFRESH MATERIALIZED VIEW CONCURRENTLY`                         |
 | `GET/POST /api/manutencao/diaria` | `CRON_SECRET` ou admin | expurgo LGPD + refresh da view + fila de mídia + limpeza de jobs |
+| `GET/POST /api/manutencao/backup` | `CRON_SECRET` ou admin | backup diário + retenção (F9-11)                                 |
 
 Regras ao instrumentar uma action:
 
@@ -127,6 +128,43 @@ filtros inválidos retornam 400 com o campo problemático.
 `RESEND_WEBHOOK_SECRET` responde **503** — falha fechada, nunca aceita evento não
 autenticado. Configure a URL no painel do Resend (Webhooks) e copie o signing
 secret para a variável.
+
+## Backup e alertas (F9-11)
+
+| Módulo                                     | Responsabilidade                                                         |
+| ------------------------------------------ | ------------------------------------------------------------------------ |
+| `application/backup/backup.service.ts`     | exporta as tabelas em NDJSON+gzip, monta o manifesto e aplica a retenção |
+| `application/backup/restaurar.ts`          | drill de restauração: confere hash, suspende FKs, insere, recria FKs     |
+| `application/backup/ordem.ts`              | ordem de inserção respeitando FKs (Kahn, auto-referência ignorada)       |
+| `application/backup/retencao.ts`           | apaga dias mais antigos que `backup_retencao_dias`                       |
+| `infrastructure/backup/destino.ts`         | destino R2 (bucket **privado**) ou diretório local                       |
+| `infrastructure/alertas/alerta.service.ts` | alerta em 3 canais + registro em `log_alerta`                            |
+
+Decisões que valem saber antes de mexer:
+
+1. **Por que não `pg_dump`.** A função da Vercel não tem binário do Postgres.
+   O formato é um `.ndjson.gz` por tabela: legível, comprimido e restaurável com
+   `jsonb_populate_recordset`, que aplica o tipo de cada coluna.
+2. **Por que `R2_BACKUP_BUCKET` é separado.** O bucket de imagens é público e as
+   chaves de backup são previsíveis (`backups/AAAA-MM-DD/...`): guardar dump ali
+   equivaleria a publicar a base. Sem bucket privado configurado a rota responde
+   **503** e não grava nada.
+3. **Por que o manifesto tem `sha256`.** Restauração sem verificação de
+   integridade falha no pior momento possível. O restaurador recusa arquivo
+   adulterado antes de inserir qualquer linha.
+4. **Por que as FKs são removidas na restauração.** `session_replication_role`
+   exige superusuário; derrubar e recriar 25 constraints resolve o mesmo
+   problema (inclusive auto-referência de categoria) e cabe no usuário dono.
+5. **Por que `log_alerta` fica fora da view de auditoria.** A view é o índice de
+   auditoria de dados pessoais; alerta é telemetria de sistema. Misturar mudaria
+   o significado da consulta para quem fiscaliza a LGPD.
+6. **Alerta honesto.** Cada canal devolve `sucesso`, `pulado` ou `erro`, e
+   `entregue` só é verdadeiro quando algum canal confirmou e nenhum falhou.
+   Canal não configurado é `pulado`, nunca `sucesso`.
+
+Canais do alerta (RNF-031): e-mail para `ADMIN_EMAIL_INSTITUCIONAL` (Resend),
+webhook genérico em `ALERTA_WEBHOOK_URL` (payload serve Slack e Discord) e
+Sentry via `SENTRY_DSN` (o único que sobrevive ao banco fora do ar).
 
 ### E-mail transacional (F9-09, parcial)
 

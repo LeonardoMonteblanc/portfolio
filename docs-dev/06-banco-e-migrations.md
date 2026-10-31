@@ -116,3 +116,41 @@ haviam sido criadas por script ad-hoc. A migration passou a criá-las
 Lição: se um objeto existe em produção mas não nas migrations, o projeto **não é
 reprodutível**. A suíte de integração (que sobe o banco do zero) é o detector
 desse tipo de drift.
+
+### 0016 — `log_alerta`
+
+Criada para o backup/alerta (F9-11). Ficou **fora** de
+`vw_auditoria_consolidada` de propósito: a view indexa ações sobre dados
+pessoais; alerta é telemetria do sistema. A migration foi gerada pelo
+`drizzle-kit` e editada à mão por dois motivos:
+
+1. o `generate` re-emitiu `CREATE TABLE` para as três tabelas que já existiam em
+   produção (`log_correcao`, `log_reabertura`, `log_cancelamento_fila`), o que
+   faria o deploy falhar com "relation already exists" — esses comandos foram
+   removidos e o snapshot novo manteve o diff correto dali em diante;
+2. todo comando virou `IF NOT EXISTS`, para a migration ser segura em banco que
+   já a tenha aplicado por outro caminho.
+
+## Restauração (drill do RNF-027)
+
+O backup diário gera `backups/AAAA-MM-DD/` com um `.ndjson.gz` por tabela e um
+`manifesto.json` (sha256 e contagem por tabela). Para ensaiar a volta:
+
+```bash
+# 1. cria um banco descartável e aplica o schema
+docker exec portfolio-postgres-1 psql -U dev -d postgres \
+  -c "create database diretorio_restore_drill"
+$env:DATABASE_URL='postgresql://dev:dev@localhost:5432/diretorio_restore_drill'
+pnpm db:migrate
+
+# 2. restaura o backup mais recente
+pnpm db:restore --db postgresql://dev:dev@localhost:5432/diretorio_restore_drill --limpar --confirmar
+```
+
+O script compara a contagem de cada tabela com o manifesto e sai com código 1 se
+divergir. **Ele recusa qualquer host que não seja local** — restaurar em cima do
+Neon de produção apagaria a base.
+
+> Restauração e backup precisam da mesma versão de schema. Se uma coluna
+> `NOT NULL` foi criada depois do backup, o `jsonb_populate_recordset` não aplica
+> o default e a inserção falha com mensagem explícita: gere um backup novo.

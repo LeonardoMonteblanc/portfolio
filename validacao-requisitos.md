@@ -146,7 +146,7 @@
 | **RF-065** SEO                     | ✅     | `generateMetadata` + JSON-LD `LocalBusiness` | —                             |
 | **RF-066** Sitemap dinâmico        | ✅     | `app/sitemap.ts`                             | —                             |
 | **RF-067** E-mail transacional (4) | ⚠️     | Templates + `client.ts`                      | Envio real não testado (mock) |
-| **RF-068** Backup diário           | ❌     | Procedimento não automatizado                | Script + cron faltando        |
+| **RF-068** Backup diário           | ✅     | `backup.service.ts` + cron `30 3 * * *`      | —                             |
 | **RF-069** Acessibilidade (WCAG)   | ✅     | axe-core no CI + componentes shadcn          | —                             |
 
 ### M12 — LGPD e Termos (3 RFs)
@@ -193,20 +193,20 @@
 | RNF                            | Status | Evidência                       |
 | ------------------------------ | ------ | ------------------------------- |
 | **RNF-024** SLA 98%            | 📋     | Vercel + monitoramento          |
-| **RNF-025** Backup diário      | ❌     | Não automatizado                |
+| **RNF-025** Backup diário      | ✅     | Cron diário + R2 privado        |
 | **RNF-026** Replicação imagens | ⚠️     | R2 configurado mas não validado |
-| **RNF-027** Teste restauração  | ❌     | Pendente                        |
+| **RNF-027** Teste restauração  | ✅     | `backup.test.ts` + drill manual |
 | **RNF-028** RPO 24h / RTO 24h  | 📋     | Coerente com backup diário      |
 
 ### NF4 — Observabilidade (5 RNFs)
 
-| RNF                               | Status | Evidência                          |
-| --------------------------------- | ------ | ---------------------------------- |
-| **RNF-029** Logs estruturados     | ✅     | `pino` JSON + `instrumentation.ts` |
-| **RNF-030** Monitoramento uptime  | ⚠️     | Better Stack configurado           |
-| **RNF-031** Alertas operacionais  | ⚠️     | Sentry + logs                      |
-| **RNF-032** Métricas operacionais | ✅     | Sem analytics de visitante         |
-| **RNF-033** Painel Desenvolvedor  | ❌     | Não implementado                   |
+| RNF                               | Status | Evidência                            |
+| --------------------------------- | ------ | ------------------------------------ |
+| **RNF-029** Logs estruturados     | ✅     | `pino` JSON + `instrumentation.ts`   |
+| **RNF-030** Monitoramento uptime  | ⚠️     | Better Stack configurado             |
+| **RNF-031** Alertas operacionais  | ✅     | `log_alerta` + e-mail/webhook/Sentry |
+| **RNF-032** Métricas operacionais | ✅     | Sem analytics de visitante           |
+| **RNF-033** Painel Desenvolvedor  | ❌     | Não implementado                     |
 
 ### NF5 — Acessibilidade (3 RNFs)
 
@@ -399,14 +399,14 @@
 
 ### Obrigatórias (Bloqueiam go-live)
 
-- [ ] Aplicar `0012_add_origem_decisao_to_solicitacao.sql` no Neon
+- [x] Aplicar `0012_add_origem_decisao_to_solicitacao.sql` no Neon
 - [ ] Executar `db:update:admin-token` no Neon
-- [ ] Executar `db:seed:admin` no Neon
+- [x] Executar `db:seed:admin` no Neon
 - [ ] Configurar variáveis Vercel: `UPSTASH_REDIS_URL`, `UPSTASH_REDIS_TOKEN`, `RESEND_FROM_EMAIL`, `SENTRY_AUTH_TOKEN`
 - [ ] Implementar cron de expiração correção (RF-028)
-- [ ] Implementar inserção logs auditoria em todas as actions (RF-062)
-- [ ] Criar view materializada `vw_auditoria_consolidada` + cron 5min (RF-063)
-- [ ] Implementar backup diário + alerta 3 canais (RF-068, RNF-025, RNF-031)
+- [x] Implementar inserção logs auditoria em todas as actions (RF-062)
+- [x] Criar view materializada `vw_auditoria_consolidada` + cron 5min (RF-063)
+- [x] Implementar backup diário + alerta 3 canais (RF-068, RNF-025, RNF-031)
 - [ ] Configurar R2 produção + Sharp compressão (RF-056, RNF-015)
 - [ ] Testes de integração rodando no CI (Testcontainers)
 
@@ -414,7 +414,7 @@
 
 - [ ] Testes E2E Playwright no CI
 - [ ] Teste de carga k6 em staging
-- [ ] Teste restauração backup
+- [x] Teste restauração backup
 - [ ] Painel Desenvolvedor operacional
 - [ ] Mesclar categorias UI (RF-055)
 
