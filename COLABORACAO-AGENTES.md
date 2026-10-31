@@ -197,3 +197,24 @@ Estado verificado em produção (`https://guiabg.com.br`): `/`, `/catalogo`, `/c
 - `appendLog` agora aceita o `tx` da transação em curso.
 - Regra de retenção corrigida para o que o RNF-018 pede: expurgo conta **2 anos
   após o estado terminal** da solicitação, não a partir da criação.
+
+### 9.6 Auditoria de ponta a ponta (31/10, terceira parte)
+
+- **F9-04:** `exigirContextoAdmin()` (`src/lib/audit-context.ts`) passou a ser a
+  guarda de sessão **e** a fonte de ator/IP. Instrumentadas: login (sucesso e
+  falha), decisão de solicitação (aprovar/reprovar/corrigir), publicar/despublicar
+  negócio, desativar categoria e anonimização LGPD. Todas gravam
+  `log_auditoria` na mesma transação e agora preenchem `ator_id` na tabela de
+  evento (antes ficava `NULL`).
+- **F9-05/06:** `vw_auditoria_consolidada` (materializada, `UNION ALL` das 24
+  tabelas) + `consultarAuditoria()` + `/api/auditoria/refresh`.
+- **Drift descoberto:** `log_correcao`, `log_reabertura` e
+  `log_cancelamento_fila` existiam **só** em produção (script ad-hoc, sem schema
+  nem migration). Sem elas, um banco novo não construía a view. Regularizadas na
+  migration 0015, com schemas Drizzle.
+- **Crons:** consolidados em `/api/manutencao/diaria` (expurgo LGPD + refresh da
+  view + fila de mídia + limpeza de jobs). Plano Hobby só aceita 2 crons diários;
+  agora existe 1.
+- **Testes:** suíte de integração em **34** (6 novos de auditoria).
+- Verificado em produção: `/api/auditoria/refresh` e `/api/manutencao/diaria`
+  respondem 401 sem `CRON_SECRET` e 200 com ele; view com 32 linhas.
