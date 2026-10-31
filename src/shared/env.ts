@@ -23,4 +23,36 @@ const envSchema = z.object({
   ADMIN_EMAIL_DPO: z.string().email().optional(),
 });
 
-export const env = envSchema.parse(process.env);
+// During build (next build), we may not have all env vars set.
+// Use safeParse with fallback for build-time, but enforce at runtime.
+function validateEnv() {
+  // Skip strict validation during Next.js build phase
+  if (process.env.NEXT_PHASE === "phase-production-build") {
+    return envSchema.parse({
+      NODE_ENV: "production",
+      DATABASE_URL:
+        process.env.DATABASE_URL ||
+        "postgresql://build:build@localhost:5432/build",
+      JWT_SECRET:
+        process.env.JWT_SECRET ||
+        "build-secret-min-32-chars-long-for-build-only",
+      RESEND_API_KEY: process.env.RESEND_API_KEY || "build-key",
+      RESEND_FROM_EMAIL: process.env.RESEND_FROM_EMAIL || "build@test.local",
+      R2_ACCOUNT_ID: process.env.R2_ACCOUNT_ID || "build",
+      R2_ACCESS_KEY_ID: process.env.R2_ACCESS_KEY_ID || "build",
+      R2_SECRET_ACCESS_KEY: process.env.R2_SECRET_ACCESS_KEY || "build",
+      R2_BUCKET_NAME: process.env.R2_BUCKET_NAME || "build",
+      R2_PUBLIC_URL: process.env.R2_PUBLIC_URL,
+      UPSTASH_REDIS_URL: process.env.UPSTASH_REDIS_URL,
+      UPSTASH_REDIS_TOKEN: process.env.UPSTASH_REDIS_TOKEN,
+      SENTRY_DSN: process.env.SENTRY_DSN,
+      ADMIN_EMAIL_INSTITUCIONAL: process.env.ADMIN_EMAIL_INSTITUCIONAL,
+      ADMIN_EMAIL_DPO: process.env.ADMIN_EMAIL_DPO,
+    });
+  }
+
+  // Runtime: strict validation
+  return envSchema.parse(process.env);
+}
+
+export const env = validateEnv();

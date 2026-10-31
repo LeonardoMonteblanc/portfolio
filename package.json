@@ -17,6 +17,7 @@
     "db:migrate:prod": "tsx src/scripts/migrate.ts",
     "db:seed:admin": "tsx src/scripts/seed-admin-production.ts",
     "db:seed:categorias": "tsx src/scripts/seed-categorias.ts",
+    "db:seed:completo": "tsx scripts/seed-completo.ts",
     "db:update:admin-token": "tsx src/scripts/update-admin-token-version.ts",
     "db:studio": "drizzle-kit studio",
     "prepare": "husky",

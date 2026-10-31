@@ -30,14 +30,13 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
-*.env
-.env.production
+# env files - ONLY local/production overrides
+.env
 .env.local
-.env.example
-tasks/
-agents.md
-.gitignore
+.env.production
+.env.test
+.env.sentry-build-plugin
+.env.*.local
 
 # vercel
 .vercel
@@ -49,4 +48,24 @@ next-env.d.ts
 # Sentry Config File
 .env.sentry-build-plugin
 .neon
-.env.test
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Logs
+*.log
+logs/
+
+# Turbo
+.turbo
+
+# Generated
+*.generated.ts
