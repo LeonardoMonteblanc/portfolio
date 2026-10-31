@@ -1,11 +1,10 @@
 // src/ui/components/share-button.tsx
 "use client";
 
-import { forwardRef } from "react";
+import { forwardRef, useCallback, useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { Share2, Copy, Check } from "lucide-react";
 import { Button } from "@/ui/components/button";
-import { useState, useCallback } from "react";
 
 interface ShareButtonProps {
   url: string;
@@ -32,34 +31,23 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
     const [copied, setCopied] = useState(false);
     const [shareSupported, setShareSupported] = useState(false);
 
-    // Verificar suporte ao Web Share API
-    if (typeof window !== "undefined") {
-      setShareSupported(navigator.share !== undefined);
-    }
+    /**
+     * A checagem do Web Share API PRECISA ficar no efeito.
+     *
+     * Antes ela chamava `setShareSupported` durante o render: isso re-renderiza
+     * a cada render, entra em loop e o React aborta a página com "Too many
+     * re-renders" (#301) — a página do negócio caía para o visitante no
+     * navegador. No efeito, o HTML do servidor e o primeiro render do cliente
+     * continuam iguais (sem mismatch de hidratação) e a capacidade só é
+     * aplicada depois de montar.
+     */
+    useEffect(() => {
+      setShareSupported(
+        typeof navigator !== "undefined" && navigator.share !== undefined,
+      );
+    }, []);
 
-    const handleShare = useCallback(async () => {
-      const shareData = {
-        title: title || document.title,
-        text: text || "",
-        url,
-      };
-
-      if (shareSupported && navigator.share) {
-        try {
-          await navigator.share(shareData);
-          return;
-        } catch (err) {
-          if ((err as Error).name !== "AbortError") {
-            // Fallback para copiar link
-            await copyToClipboard();
-          }
-        }
-      } else {
-        await copyToClipboard();
-      }
-    }, [url, title, text, shareSupported]);
-
-    const copyToClipboard = async () => {
+    const copyToClipboard = useCallback(async () => {
       try {
         await navigator.clipboard.writeText(url);
         setCopied(true);
@@ -77,7 +65,28 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
       }
-    };
+    }, [url]);
+
+    const handleShare = useCallback(async () => {
+      const shareData = {
+        title: title || document.title,
+        text: text || "",
+        url,
+      };
+
+      if (shareSupported && navigator.share) {
+        try {
+          await navigator.share(shareData);
+          return;
+        } catch (err) {
+          if ((err as Error).name !== "AbortError") {
+            await copyToClipboard();
+          }
+        }
+      } else {
+        await copyToClipboard();
+      }
+    }, [url, title, text, shareSupported, copyToClipboard]);
 
     return (
       <Button
@@ -95,7 +104,7 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
             <span className="sr-only">Link copiado</span>
           </>
         ) : (
-          <Share2 className="h-4 w-4" />
+          <Share2 className="h-4 w-4" aria-hidden="true" />
         )}
         <span className="hidden sm:inline ml-1">
           {copied ? "Copiado!" : "Compartilhar"}

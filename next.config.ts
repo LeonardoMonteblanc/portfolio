@@ -1,6 +1,15 @@
 import { withSentryConfig } from "@sentry/nextjs/config";
 import type { NextConfig } from "next";
 
+// React em desenvolvimento usa eval() para reconstruir stack de erro. Sem
+// `unsafe-eval` a hidratação não roda (o console avisa "eval() is not
+// supported") e os handlers de clique ficam mortos — foi o que quebrou o E2E
+// de login. Produção nunca usa eval e mantém a CSP estrita (RNF-004).
+const scriptSrc =
+  process.env.NODE_ENV === "production"
+    ? "'self' 'unsafe-inline'"
+    : "'self' 'unsafe-inline' 'unsafe-eval'";
+
 const securityHeaders = [
   {
     key: "Strict-Transport-Security",
@@ -18,7 +27,7 @@ const securityHeaders = [
     value: [
       "default-src 'self'",
       "img-src 'self' data: https://*.r2.cloudflarestorage.com https://assets.seudominio.com.br",
-      "script-src 'self' 'unsafe-inline'",
+      `script-src ${scriptSrc}`,
       "style-src 'self' 'unsafe-inline'",
       "font-src 'self'",
       "connect-src 'self' https://api.resend.com https://*.sentry.io https://*.ingest.sentry.io https://*.ingest.us.sentry.io https://*.upstash.io",

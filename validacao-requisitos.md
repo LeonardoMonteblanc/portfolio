@@ -408,11 +408,11 @@
 - [x] Criar view materializada `vw_auditoria_consolidada` + cron 5min (RF-063)
 - [x] Implementar backup diário + alerta 3 canais (RF-068, RNF-025, RNF-031)
 - [ ] Configurar R2 produção + Sharp compressão (RF-056, RNF-015)
-- [ ] Testes de integração rodando no CI (Testcontainers)
+- [x] Testes de integração rodando no CI (serviço Postgres)
 
 ### Recomendadas (Pós-go-live Sprint 1)
 
-- [ ] Testes E2E Playwright no CI
+- [x] Testes E2E Playwright no CI
 - [ ] Teste de carga k6 em staging
 - [x] Teste restauração backup
 - [ ] Painel Desenvolvedor operacional

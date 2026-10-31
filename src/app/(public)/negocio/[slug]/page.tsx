@@ -218,11 +218,6 @@ async function NegocioPageContent({
                     ) : (
                       <span className="font-medium">{contato.valor}</span>
                     )}
-                    {contato.ordem !== undefined && (
-                      <span className="text-xs text-muted-foreground">
-                        (ordem: {contato.ordem})
-                      </span>
-                    )}
                   </div>
                 ))}
               </CardContent>

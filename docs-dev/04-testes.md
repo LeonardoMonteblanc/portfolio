@@ -7,7 +7,47 @@
 | Unitário   | `tests/unit/**`, `src/**/*.spec.ts` | não           | ~2 s (216 testes) | regras RN01–RN38, máquinas de estado ME-01..ME-08, utilitários |
 | Integração | `tests/integration/**`              | Postgres real | ~50 s (36 testes) | SQL, transações, constraints, idempotência                     |
 
-E2E (Playwright) ainda **não** está configurado — é o próximo passo de qualidade.
+## E2E (Playwright)
+
+```bash
+# banco descartável, uma vez
+docker exec portfolio-postgres-1 psql -U dev -d postgres -c "create database diretorio_e2e"
+$env:DATABASE_URL='postgresql://dev:dev@localhost:5432/diretorio_e2e'
+pnpm db:migrate
+pnpm db:seed:completo
+
+# roda (faz build de produção e sobe em 127.0.0.1:3100)
+pnpm test:e2e
+```
+
+Decisões que explicam o formato:
+
+1. **Roda contra o build de produção, não `next dev`.** O `webServer` do
+   `playwright.config.ts` executa `pnpm build && pnpm start`. Testar o artefato
+   que o usuário recebe é mais fiel — e o modo dev deste projeto tem um problema
+   conhecido de hidratação (ver nota abaixo).
+2. **O `globalSetup` recusa `DATABASE_URL` remoto.** Sem essa trava, o Next
+   subiria com o `.env.local` (Neon de produção) e o teste escreveria na base
+   real. Ele também falha se não houver negócio publicado — teste contra banco
+   vazio passaria verde sem provar nada.
+3. **Seed obrigatório.** Os cenários dependem de "Padaria do Zé" e "Pizzaria
+   Bella Napoli" (`pnpm db:seed:completo`). Se já houver servidor no ar na porta,
+   reuse com `E2E_BASE_URL=http://127.0.0.1:3100`.
+
+Cobertura atual (9 cenários): home, catálogo, filtro por categoria, busca sem
+acento, página do negócio (nome/contatos/endereço), 404 de slug inexistente,
+redirecionamento de `/admin` sem sessão, tela de login e erro de credencial.
+
+> **Achado do E2E:** o `ShareButton` chamava `setState` durante o render. Isso
+> entra em loop de re-render e o React aborta a página com "Too many
+> re-renders" (#301): a página do negócio quebrava **no navegador do visitante**
+> mesmo com o HTML do servidor correto. `curl`/`Invoke-WebRequest` davam 200 e
+> escondiam o problema — só um teste que clica encontrou.
+
+> **Nota sobre `next dev`:** neste ambiente o Turbopack dev não hidrata as
+> páginas (clique em componente cliente não dispara handler) — por isso o E2E
+> usa o build. A CSP já permite `unsafe-eval` em desenvolvimento; o problema
+> restante é do modo dev e não afeta produção.
 
 ## Unitários
 

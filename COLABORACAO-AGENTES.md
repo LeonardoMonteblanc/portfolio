@@ -264,3 +264,30 @@ Estado verificado em produção (`https://guiabg.com.br`): `/`, `/catalogo`, `/c
 - **Testes:** unitários **216** (9 novos de ordem/retenção), integração **36**
   (2 novos: manifesto íntegro e restauração completa com recusa de arquivo
   corrompido).
+
+### 9.9 CI completo e E2E Playwright (31/10, sexta parte)
+
+- **CI** (`.github/workflows/ci.yml`) reescrito com quatro jobs: `qualidade`
+  (tipos, lint, unitários), `integracao` (serviço Postgres + migrations do zero),
+  `build` (build de produção contra banco migrado) e `e2e`. Antes o workflow só
+  rodava tipos/lint/build e não executava **nenhum** teste.
+- **E2E** (`playwright.config.ts` + `tests/e2e`): 9 cenários do fluxo público e da
+  guarda do painel, rodando contra build de produção e banco local descartável.
+  `globalSetup` recusa `DATABASE_URL` remoto e exige negócio publicado.
+- **Bug crítico encontrado pelo E2E:** `ShareButton` chamava
+  `setShareSupported()` **durante o render**, gerando loop de re-render e
+  "Too many re-renders" (React #301). Consequência: `/negocio/<slug>` — a página
+  mais importante do site — quebrava no navegador do visitante, embora
+  `Invoke-WebRequest` respondesse 200. Corrigido movendo a detecção do Web Share
+  API para `useEffect` e estabilizando `copyToClipboard`/`handleShare` com
+  `useCallback`.
+- **CSP em desenvolvimento:** `next.config.ts` passou a incluir `'unsafe-eval'` no
+  `script-src` só fora de produção (React dev reconstrói stack com `eval`; sem
+  isso o console acusa "eval() is not supported"). Em produção a CSP continua
+  estrita.
+- **Metadado removido da página pública:** a lista de contatos exibia
+  `(ordem: N)` para o visitante — resquício de depuração removido.
+- **Nota aberta:** o `next dev` deste ambiente não hidrata componentes cliente
+  (clique não dispara handler), mesmo com a CSP corrigida; o build de produção
+  hidrata normalmente. O E2E roda no build por causa disso. Vale investigar com
+  o agente de frontend, que trabalha em dev.
