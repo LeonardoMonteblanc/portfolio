@@ -218,3 +218,19 @@ Estado verificado em produção (`https://guiabg.com.br`): `/`, `/catalogo`, `/c
 - **Testes:** suíte de integração em **34** (6 novos de auditoria).
 - Verificado em produção: `/api/auditoria/refresh` e `/api/manutencao/diaria`
   respondem 401 sem `CRON_SECRET` e 200 com ele; view com 32 linhas.
+
+### 9.7 Auditoria da governança e consulta (31/10, quarta parte)
+
+- Instrumentadas as ações tier-1 restantes: abrir votação, registrar voto,
+  abrir contestação, publicar no fórum, suspender e reativar administrador.
+  Todas gravam evento + `log_auditoria` na mesma transação.
+- Nova rota **`GET /api/auditoria`** (somente admin) expõe
+  `consultarAuditoria` com filtros validados por Zod — pronta para a UI de
+  auditoria (F9-13) quando o frontend estabilizar.
+- Removidas do Neon as tabelas-lixo `audit_temp_consolidada` e
+  `tmp_auditoria_consolidada` (32 linhas cada, cópias derivadas dos logs de
+  origem; nenhum dado-fonte perdido). Banco agora com 46 tabelas base + a view
+  materializada.
+- Ainda sem auditoria explícita: `solicitacoes/atualizar.ts` (correções),
+  `solicitacoes/triar-sugestao.ts` (sugestões) e `midia/imagem.ts`/`anexo.ts`
+  (esses já gravam log de evento, mas não o índice `log_auditoria`).
