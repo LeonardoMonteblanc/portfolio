@@ -60,9 +60,9 @@ Thumbs.db
 ehthumbs.db
 Desktop.ini
 
-# Logs
+# Logs (apenas diretório de logs na raiz — não ignorar src/**/logs/)
 *.log
-logs/
+/logs/
 
 # Turbo
 .turbo
